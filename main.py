@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify, render_template
+import ansible_automator
+import threading
 
 app = Flask(__name__)
 
@@ -11,13 +13,24 @@ def update_status():
     # Get the JSON data sent from the client
     data = request.get_json()
 
+    string_of_ips = ""
+
     # Log or process the received data
     print("Received Data:")
     for team in data:
-        print(f"Team: {team['teamName']}")
-        print(f"Row Checked: {team['rowChecked']}")
         for ip_state in team['ipStates']:
-            print(f"IP: {ip_state['ip']}, Checked: {ip_state['isChecked']}")
+            if ip_state['isChecked']:
+                print(ip_state['ip'])
+                string_of_ips += ip_state['ip'] + ","
+
+    string_of_ips = string_of_ips[:-1]
+    print(string_of_ips)
+
+
+    inventory_path = "/path/to/invintory.ini"
+    playbook_path = "/path/to/playbook.yml"
+    
+    threading.Thread(target=ansible_automator.run_playbook, args=(inventory_path, playbook_path, string_of_ips))
 
     # Respond with a success message
     return jsonify({"status": "success", "message": "Data received successfully!"})

@@ -349,7 +349,7 @@
 
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Collect all checkbox states and send to the server when needed
+      // Collect all checkbox states and send to the server
       const getCheckedData = () => {
         const checkedData = [];
 
@@ -361,12 +361,18 @@
             ipStates: []
           };
 
-          // Collect IP checkbox states for each row (team)
-          row.querySelectorAll('td .ip-checkbox').forEach((checkbox, colIndex) => {
-            rowData.ipStates.push({
-              ip: checkbox.nextElementSibling.textContent.trim(),
-              isChecked: checkbox.checked
-            });
+          // Collect IP checkbox states for each row (team) across all columns
+          row.querySelectorAll('td').forEach((cell, colIndex) => {
+            const ipAddress = cell.querySelector('span') ? cell.querySelector('span').textContent.trim() : null;
+            const checkbox = cell.querySelector('.ip-checkbox');
+            
+            if (ipAddress && checkbox) {
+              rowData.ipStates.push({
+                ip: ipAddress,
+                isChecked: checkbox.checked,
+                columnIndex: colIndex + 1 // This ensures correct mapping to columns (1-based index)
+              });
+            }
           });
 
           checkedData.push(rowData);
@@ -399,12 +405,12 @@
         }
       };
 
-      // You can call sendDataToServer() whenever you need to send the data
-      // For example, send the data when the "Save" button is clicked:
-      const saveButton = document.createElement('button');
-      saveButton.textContent = "Save Status";
-      saveButton.addEventListener('click', sendDataToServer);
-      document.body.appendChild(saveButton);  // Add button to DOM (or place it in the right spot)
+      // Event listener for individual checkbox changes (IP checkboxes and row checkboxes)
+      document.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+        checkbox.addEventListener('change', () => {
+          sendDataToServer(); // Send data each time a checkbox is changed
+        });
+      });
     });
   </script>
 </body>
