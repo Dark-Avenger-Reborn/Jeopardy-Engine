@@ -30,7 +30,7 @@ def update_status():
     inventory_path = "/path/to/invintory.ini"
     playbook_path = "/path/to/playbook.yml"
     
-    threading.Thread(target=ansible_automator.run_playbook, args=(inventory_path, playbook_path, string_of_ips))
+    #threading.Thread(target=ansible_automator.run_playbook, args=(inventory_path, playbook_path, string_of_ips))
 
     # Respond with a success message
     return jsonify({"status": "success", "message": "Data received successfully!"})
