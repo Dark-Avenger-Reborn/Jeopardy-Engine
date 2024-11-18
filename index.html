@@ -345,6 +345,67 @@
         });
       });
     });
+
+
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Collect all checkbox states and send to the server when needed
+      const getCheckedData = () => {
+        const checkedData = [];
+
+        // Collect row-level data (team data)
+        document.querySelectorAll('tbody tr').forEach((row, rowIndex) => {
+          const rowData = {
+            teamName: row.querySelector('th').textContent.trim(),
+            rowChecked: row.querySelector('.row-checkbox').checked,
+            ipStates: []
+          };
+
+          // Collect IP checkbox states for each row (team)
+          row.querySelectorAll('td .ip-checkbox').forEach((checkbox, colIndex) => {
+            rowData.ipStates.push({
+              ip: checkbox.nextElementSibling.textContent.trim(),
+              isChecked: checkbox.checked
+            });
+          });
+
+          checkedData.push(rowData);
+        });
+
+        return checkedData;
+      };
+
+      // Function to send data to Flask server
+      const sendDataToServer = async () => {
+        const data = getCheckedData();
+
+        try {
+          const response = await fetch('/update_status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data), // Sending JSON data
+          });
+
+          if (response.ok) {
+            const jsonResponse = await response.json();
+            console.log('Server Response:', jsonResponse);
+          } else {
+            console.error('Error sending data to server');
+          }
+        } catch (error) {
+          console.error('Error sending data to server:', error);
+        }
+      };
+
+      // You can call sendDataToServer() whenever you need to send the data
+      // For example, send the data when the "Save" button is clicked:
+      const saveButton = document.createElement('button');
+      saveButton.textContent = "Save Status";
+      saveButton.addEventListener('click', sendDataToServer);
+      document.body.appendChild(saveButton);  // Add button to DOM (or place it in the right spot)
+    });
   </script>
 </body>
 </html>
