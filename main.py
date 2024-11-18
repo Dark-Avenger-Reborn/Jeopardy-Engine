@@ -27,7 +27,7 @@ def update_status():
     print(string_of_ips)
 
 
-    inventory_path = "/path/to/invintory.ini"
+    inventory_path = "./ansible_recources/real.ini"
     playbook_path = "/path/to/playbook.yml"
     
     #threading.Thread(target=ansible_automator.run_playbook, args=(inventory_path, playbook_path, string_of_ips))
