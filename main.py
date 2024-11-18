@@ -21,7 +21,11 @@ def update_status():
         for ip_state in team['ipStates']:
             if ip_state['isChecked']:
                 print(ip_state['ip'])
-                string_of_ips += ip_state['ip'] + ","
+                if (":" in ip_state['ip']):
+                    finalIP = ip_state['ip'].split(":")[0]
+                else:
+                    finalIP = ip_state['ip']
+                string_of_ips += finalIP + ","
 
     string_of_ips = string_of_ips[:-1]
     print(string_of_ips)
