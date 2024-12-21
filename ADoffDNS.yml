@@ -1,0 +1,8 @@
+---
+- name: Stop DNS on Windows
+  hosts: AD
+  tasks:
+    - name: Stop DNS service
+      win_service:
+        name: dns
+        state: stopped

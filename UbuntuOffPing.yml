@@ -1,0 +1,7 @@
+---
+- name: Disable ICMP Echo Requests
+  hosts: ubuntu1 ubuntu2
+  become: yes
+  tasks:
+    - name: Disable ICMP Requests
+      shell: echo "1" > /proc/sys/net/ipv4/icmp_echo_ignore_all

@@ -1,0 +1,10 @@
+---
+- name: Execute a command silently on remote machines
+  hosts: webapp
+  become: true
+
+  tasks:
+    - name: WebApp Server Stop Apache Service
+      ansible.builtin.service:
+        name: apache2
+        state: stopped

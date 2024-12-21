@@ -1,0 +1,8 @@
+---
+- name: Stop LDAP on Windows
+  hosts: AD
+  tasks:
+    - name: Stop LDAP service
+      win_service:
+        name: NTDS
+        state: stopped
