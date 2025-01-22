@@ -1,0 +1,136 @@
+/* General Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Arial', sans-serif;
+    background-color: #212121; /* Dark background */
+    color: #fff; /* White text for contrast */
+    padding: 20px;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #fff;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed; /* Ensures consistent column widths */
+    background-color: #333; /* Dark table background */
+    border-radius: 8px;
+    overflow: hidden;
+    margin: auto;
+  }
+
+  thead th {
+    background-color: #444; /* Slightly lighter dark for headers */
+    color: #fff;
+    padding: 10px;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  tbody td {
+    padding: 8px;
+    text-align: center;
+    font-size: 13px;
+    border: 1px solid #555; /* Subtle border between cells */
+    transition: background-color 0.3s ease;
+  }
+
+  tbody th {
+    background-color: #444;
+    color: #fff;
+    padding: 10px;
+    text-align: left;
+    font-size: 14px;
+    border-right: 1px solid #555;
+  }
+
+  /* Green Background */
+  .green {
+    background-color: #1b5e20; /* Vibrant green */
+    color: #fff;
+  }
+
+  .red {
+    background-color: #FF0000; /* Vibrant red */
+    color: #fff;
+  }
+
+  /* Checkbox Styling */
+  .styled-checkbox {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    appearance: none;
+    border: 2px solid #888;
+    border-radius: 4px;
+    background-color: #444;
+    transition: all 0.3s ease;
+  }
+
+  .styled-checkbox:checked {
+    background-color: #444;
+    border-color: #888;
+    position: relative;
+  }
+
+  .styled-checkbox:checked::after {
+    content: "✔";
+    font-size: 14px;
+    color: #fff;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Add this new style for IP checkboxes */
+  .ip-checkbox {
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  /* Adjust cell padding to accommodate the checkbox */
+  tbody td {
+    padding: 8px 4px;
+    text-align: left; /* Change to left alignment */
+  }
+
+  /* Dark Theme Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #212121;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #555;
+  }
+
+  /* Responsive Table */
+  @media (max-width: 768px) {
+    table {
+      font-size: 12px;
+    }
+
+    thead th {
+      font-size: 12px;
+      padding: 8px;
+    }
+
+    tbody td, tbody th {
+      padding: 6px;
+      font-size: 11px;
+    }
+  }
