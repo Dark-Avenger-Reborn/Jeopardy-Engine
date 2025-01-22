@@ -15,90 +15,101 @@
 
       body {
         font-family: 'Arial', sans-serif;
-        background-color: #212121; /* Dark background */
-        color: #fff; /* White text for contrast */
+        background-color: #181818; /* Darker background for modern feel */
+        color: #f0f0f0; /* Light text for contrast */
         padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        flex-direction: column;
       }
 
       h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
         text-align: center;
-        margin-bottom: 20px;
-        color: #fff;
+        color: #4caf50; /* Accent color for heading */
+      }
+
+      h2 {
+        font-size: 1rem;
+        margin-bottom: 30px;
+        text-align: center;
+        color: #b0b0b0;
       }
 
       table {
-        border-collapse: collapse;
         width: 100%;
-        table-layout: fixed; /* Ensures consistent column widths */
-        background-color: #333; /* Dark table background */
-        border-radius: 8px;
+        border-collapse: collapse;
+        background-color: #2c2c2c;
+        border-radius: 10px;
         overflow: hidden;
-        margin: auto;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
       }
 
-      thead th {
-        background-color: #444; /* Slightly lighter dark for headers */
-        color: #fff;
-        padding: 10px;
-        font-size: 14px;
+      th,
+      td {
+        padding: 12px 20px;
         text-align: center;
+        font-size: 14px;
+        border: 1px solid #555;
+      }
+
+      thead {
+        background-color: #3a3a3a;
+        color: #f0f0f0;
+        font-weight: 600;
       }
 
       tbody td {
-        padding: 8px;
-        text-align: center;
-        font-size: 13px;
-        border: 1px solid #555; /* Subtle border between cells */
+        background-color: #444;
         transition: background-color 0.3s ease;
       }
 
+      tbody td.green {
+        background-color: #4caf50;
+      }
+
+      tbody td.red {
+        background-color: #f44336;
+      }
+
       tbody th {
-        background-color: #444;
-        color: #fff;
-        padding: 10px;
+        background-color: #3a3a3a;
+        font-weight: 600;
         text-align: left;
-        font-size: 14px;
-        border-right: 1px solid #555;
+        padding: 12px;
       }
 
-      /* Green Background */
-      .green {
-        background-color: #1b5e20; /* Vibrant green */
-        color: #fff;
-      }
-
-      .red {
-        background-color: #FF0000; /* Vibrant red */
-        color: #fff;
-      }
-
-      /* Checkbox Styling */
       .styled-checkbox {
-        position: relative;
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
         cursor: pointer;
         appearance: none;
         border: 2px solid #888;
-        border-radius: 4px;
-        background-color: #444;
+        border-radius: 5px;
+        background-color: #333;
         transition: all 0.3s ease;
       }
 
       .styled-checkbox:checked {
-        background-color: #444;
-        border-color: #888;
-        position: relative;
+        background-color: #4caf50;
+        border-color: #4caf50;
       }
 
       .styled-checkbox:checked::after {
         content: "✔";
-        font-size: 14px;
         color: #fff;
+        font-size: 14px;
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
+      }
+
+      .styled-checkbox:focus {
+        outline: none;
       }
 
       /* Add this new style for IP checkboxes */
@@ -107,23 +118,24 @@
         vertical-align: middle;
       }
 
-      /* Adjust cell padding to accommodate the checkbox */
-      tbody td {
-        padding: 8px 4px;
-        text-align: left; /* Change to left alignment */
+      /* Hover effects */
+      tbody td:hover {
+        background-color: #666;
+        cursor: pointer;
       }
 
-      /* Dark Theme Scrollbar */
+      /* Dark theme scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
       }
 
-      ::-webkit-scrollbar-track {
-        background: #212121;
-      }
-
       ::-webkit-scrollbar-thumb {
         background: #555;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #212121;
       }
 
       /* Responsive Table */
@@ -132,14 +144,16 @@
           font-size: 12px;
         }
 
-        thead th {
-          font-size: 12px;
+        th, td {
           padding: 8px;
         }
 
-        tbody td, tbody th {
-          padding: 6px;
-          font-size: 11px;
+        h1 {
+          font-size: 2rem;
+        }
+
+        h2 {
+          font-size: 0.9rem;
         }
       }
     </style>
