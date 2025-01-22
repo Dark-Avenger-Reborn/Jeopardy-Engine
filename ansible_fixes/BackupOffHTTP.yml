@@ -1,0 +1,10 @@
+---
+- name: Execute a command silently on remote machines
+  hosts: backup
+  become: true
+
+  tasks:
+    - name: Backup Server Stop Apache Service
+      ansible.builtin.service:
+        name: apache2
+        state: started

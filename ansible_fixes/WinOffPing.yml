@@ -1,0 +1,8 @@
+---
+- name: Disable ICMP Requests
+  hosts: Win1 Win2
+  tasks:
+    - name: Block ICMP traffic
+      win_shell: 
+        netsh advfirewall firewall delete rule name="iSCSI Service (TCP-out)"
+
