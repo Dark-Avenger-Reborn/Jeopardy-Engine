@@ -2,7 +2,7 @@ import ansible_runner
 import threading
 
 # Define all playbook functions for "breaks" actions
-def ADoffDNS(imit_hosts=None):
+def ADoffDNS(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -18,7 +18,7 @@ def ADfixDNS(limit_hosts=None):
         limit=limit_hosts
     )
 
-def ADoffLDAP(imit_hosts=None):
+def ADoffLDAP(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -26,7 +26,7 @@ def ADoffLDAP(imit_hosts=None):
         limit=limit_hosts
     )
 
-def ADfixLDAP(imit_hosts=None):
+def ADfixLDAP(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -34,7 +34,7 @@ def ADfixLDAP(imit_hosts=None):
         limit=limit_hosts
     )
 
-def BackupOffHTTP(imit_hosts=None):
+def BackupOffHTTP(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -42,7 +42,7 @@ def BackupOffHTTP(imit_hosts=None):
         limit=limit_hosts
     )
 
-def BackupFixHTTP(imit_hosts=None):
+def BackupFixHTTP(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -50,7 +50,7 @@ def BackupFixHTTP(imit_hosts=None):
         limit=limit_hosts
     )
 
-def DevOffPing(imit_hosts=None):
+def DevOffPing(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -58,7 +58,7 @@ def DevOffPing(imit_hosts=None):
         limit=limit_hosts
     )
 
-def DevFixPing(imit_hosts=None):
+def DevFixPing(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -66,7 +66,7 @@ def DevFixPing(imit_hosts=None):
         limit=limit_hosts
     )
 
-def DevOffSSH(imit_hosts=None):
+def DevOffSSH(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -74,7 +74,7 @@ def DevOffSSH(imit_hosts=None):
         limit=limit_hosts
     )
 
-def DevFixSSH(imit_hosts=None):
+def DevFixSSH(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -82,7 +82,7 @@ def DevFixSSH(imit_hosts=None):
         limit=limit_hosts
     )
 
-def FTPOffFTP(imit_hosts=None):
+def FTPOffFTP(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -90,7 +90,7 @@ def FTPOffFTP(imit_hosts=None):
         limit=limit_hosts
     )
 
-def FTPFixFTP(imit_hosts=None):
+def FTPFixFTP(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -98,7 +98,7 @@ def FTPFixFTP(imit_hosts=None):
         limit=limit_hosts
     )
 
-def UbuntuOffPing(imit_hosts=None):
+def UbuntuOffPing(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -106,7 +106,7 @@ def UbuntuOffPing(imit_hosts=None):
         limit=limit_hosts
     )
 
-def UbuntuFixPing(imit_hosts=None):
+def UbuntuFixPing(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -114,7 +114,7 @@ def UbuntuFixPing(imit_hosts=None):
         limit=limit_hosts
     )
 
-def UbuntuOffSSH(imit_hosts=None):
+def UbuntuOffSSH(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -122,7 +122,7 @@ def UbuntuOffSSH(imit_hosts=None):
         limit=limit_hosts
     )
 
-def UbuntuFixSSH(imit_hosts=None):
+def UbuntuFixSSH(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -130,7 +130,7 @@ def UbuntuFixSSH(imit_hosts=None):
         limit=limit_hosts
     )
 
-def WebAppOffHTTP(imit_hosts=None):
+def WebAppOffHTTP(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -138,7 +138,7 @@ def WebAppOffHTTP(imit_hosts=None):
         limit=limit_hosts
     )
 
-def WebAppFixHTTP(imit_hosts=None):
+def WebAppFixHTTP(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -146,7 +146,7 @@ def WebAppFixHTTP(imit_hosts=None):
         limit=limit_hosts
     )
 
-def WebAppOffSQL(imit_hosts=None):
+def WebAppOffSQL(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -154,7 +154,7 @@ def WebAppOffSQL(imit_hosts=None):
         limit=limit_hosts
     )
 
-def WebAppFixSQL(imit_hosts=None):
+def WebAppFixSQL(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -162,7 +162,7 @@ def WebAppFixSQL(imit_hosts=None):
         limit=limit_hosts
     )
 
-def WinOffPing(imit_hosts=None):
+def WinOffPing(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -170,7 +170,7 @@ def WinOffPing(imit_hosts=None):
         limit=limit_hosts
     )
 
-def WinFixPing(imit_hosts=None):
+def WinFixPing(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -178,7 +178,7 @@ def WinFixPing(imit_hosts=None):
         limit=limit_hosts
     )
 
-def WinOffWinRM(imit_hosts=None):
+def WinOffWinRM(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
@@ -186,7 +186,7 @@ def WinOffWinRM(imit_hosts=None):
         limit=limit_hosts
     )
 
-def WinFixWinRM(imit_hosts=None):
+def WinFixWinRM(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./realinv.ini',
         inventory="./realinv.ini",
