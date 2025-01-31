@@ -1,4 +1,5 @@
 import ansible_runner
+import threading
 
 # Define all playbook functions for "breaks" actions
 def ADoffDNS(imit_hosts=None):
@@ -334,7 +335,7 @@ def handle_list_of_ips(ip_list):
             action_type = get_service_from_ip(ip)
             if status == "on":
                 print(action_map[action_type]["break"])
-                action_map[action_type]["break"](ip)
+                threading.Thread(target=action_map[action_type]["break"], args=(ip,)).start()
             else:
                 print(action_map[action_type]["fix"])
-                action_map[action_type]["fix"](ip)
+                threading.Thread(target=action_map[action_type]["fix"], args=(ip,)).start()
