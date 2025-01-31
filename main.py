@@ -1,6 +1,7 @@
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 import eventlet
+from ansible_automator import handle_list_of_ips
 
 # Create the Flask app and initialize SocketIO with eventlet
 app = Flask(__name__)
@@ -151,8 +152,6 @@ def main():
 
 @socketio.on('update_status')
 def handle_update_status(data):
-    print(data)
-
 
     affected_ips = []
 
@@ -163,24 +162,22 @@ def handle_update_status(data):
         for team in teams:
             ip = team['ipAddresses'][column_index]
             status = "on" if data['checked'] else "off"
-            affected_ips.append(f"{ip} turned {status}")
+            affected_ips.append({ip: status})
     elif data['type'] == 'row':
         # Update based on row
         row_index = int(data['index']) - 1
         for ip in teams[row_index]['ipAddresses']:
             status = "on" if data['checked'] else "off"
-            affected_ips.append(f"{ip} turned {status}")
+            affected_ips.append({ip: status})
     elif data['type'] == 'ip':
         # Update based on specific IP
         row_index = int(data['row']) - 1
         column_index = int(data['column']) - 1
         ip = teams[row_index]['ipAddresses'][column_index]
         status = "on" if data['checked'] else "off"
-        affected_ips.append(f"{ip} turned {status}")
+        affected_ips.append({ip: status})
 
-    # Print all affected IPs
-    for ip in affected_ips:
-        print(ip)
+    handle_list_of_ips(affected_ips)
 
     # Emit a success message back to the client
     socketio.emit('update_status_all', data)
