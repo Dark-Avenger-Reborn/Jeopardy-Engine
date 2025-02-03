@@ -4,7 +4,7 @@ import threading
 # Define all playbook functions for "breaks" actions
 def ADoffDNS(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/ADoffDNS.yml",
         limit=limit_hosts
@@ -12,7 +12,7 @@ def ADoffDNS(limit_hosts=None):
 
 def ADfixDNS(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/ADfixDNS.yml",
         limit=limit_hosts
@@ -20,7 +20,7 @@ def ADfixDNS(limit_hosts=None):
 
 def ADoffLDAP(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/ADoffLDAP.yml",
         limit=limit_hosts
@@ -28,7 +28,7 @@ def ADoffLDAP(limit_hosts=None):
 
 def ADfixLDAP(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/ADfixLDAP.yml",
         limit=limit_hosts
@@ -36,7 +36,7 @@ def ADfixLDAP(limit_hosts=None):
 
 def BackupOffHTTP(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/BackupOffHTTP.yml",
         limit=limit_hosts
@@ -44,7 +44,7 @@ def BackupOffHTTP(limit_hosts=None):
 
 def BackupFixHTTP(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/BackupFixHTTP.yml",
         limit=limit_hosts
@@ -52,7 +52,7 @@ def BackupFixHTTP(limit_hosts=None):
 
 def DevOffPing(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/DevOffPing.yml",
         limit=limit_hosts
@@ -60,7 +60,7 @@ def DevOffPing(limit_hosts=None):
 
 def DevFixPing(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/DevFixPing.yml",
         limit=limit_hosts
@@ -68,7 +68,7 @@ def DevFixPing(limit_hosts=None):
 
 def DevOffSSH(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/DevOffSSH.yml",
         limit=limit_hosts
@@ -76,7 +76,7 @@ def DevOffSSH(limit_hosts=None):
 
 def DevFixSSH(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/DevFixSSH.yml",
         limit=limit_hosts
@@ -84,7 +84,7 @@ def DevFixSSH(limit_hosts=None):
 
 def FTPOffFTP(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/FTPOffFTP.yml",
         limit=limit_hosts
@@ -92,7 +92,7 @@ def FTPOffFTP(limit_hosts=None):
 
 def FTPFixFTP(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/FTPFixFTP.yml",
         limit=limit_hosts
@@ -100,7 +100,7 @@ def FTPFixFTP(limit_hosts=None):
 
 def UbuntuOffPing(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/UbuntuOffPing.yml",
         limit=limit_hosts
@@ -108,7 +108,7 @@ def UbuntuOffPing(limit_hosts=None):
 
 def UbuntuFixPing(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/UbuntuFixPing.yml",
         limit=limit_hosts
@@ -116,7 +116,7 @@ def UbuntuFixPing(limit_hosts=None):
 
 def UbuntuOffSSH(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/UbuntuOffSSH.yml",
         limit=limit_hosts
@@ -124,7 +124,7 @@ def UbuntuOffSSH(limit_hosts=None):
 
 def UbuntuFixSSH(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/UbuntuFixSSH.yml",
         limit=limit_hosts
@@ -132,7 +132,7 @@ def UbuntuFixSSH(limit_hosts=None):
 
 def WebAppOffHTTP(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/WebAppOffHTTP.yml",
         limit=limit_hosts
@@ -140,7 +140,7 @@ def WebAppOffHTTP(limit_hosts=None):
 
 def WebAppFixHTTP(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/WebAppFixHTTP.yml",
         limit=limit_hosts
@@ -148,7 +148,7 @@ def WebAppFixHTTP(limit_hosts=None):
 
 def WebAppOffSQL(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/WebAppOffSQL.yml",
         limit=limit_hosts
@@ -156,7 +156,7 @@ def WebAppOffSQL(limit_hosts=None):
 
 def WebAppFixSQL(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/WebAppFixSQL.yml",
         limit=limit_hosts
@@ -164,7 +164,7 @@ def WebAppFixSQL(limit_hosts=None):
 
 def WinOffPing(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/WinOffPing.yml",
         limit=limit_hosts
@@ -172,7 +172,7 @@ def WinOffPing(limit_hosts=None):
 
 def WinFixPing(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/WinFixPing.yml",
         limit=limit_hosts
@@ -180,7 +180,7 @@ def WinFixPing(limit_hosts=None):
 
 def WinOffWinRM(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_breaks/WinOffWinRM.yml",
         limit=limit_hosts
@@ -188,7 +188,7 @@ def WinOffWinRM(limit_hosts=None):
 
 def WinFixWinRM(limit_hosts=None):
     return ansible_runner.run(
-        private_data_dir='./realinv.ini',
+        private_data_dir='./',
         inventory="./realinv.ini",
         playbook="./ansible_fixes/WinFixWinRM.yml",
         limit=limit_hosts
