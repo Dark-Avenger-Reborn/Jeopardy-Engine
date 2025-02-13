@@ -4,7 +4,7 @@ A tool to manage and automate services during the [Lockdown Cybersecurity Compet
 
 ## Overview
 
-This repository contains code designed to manage and automate various tasks related to the UB Net Def cybersecurity competition. The core logic uses **Ansible** playbooks to control services across different hosts. The system uses Flask with **SocketIO** for real-time communication to interact with users, allowing them to "break" or "fix" services on virtual machines during the competition.
+This repository contains code designed to manage and automate various tasks related to the UB Net Def cybersecurity competition. The core logic uses **Ansible** playbooks to control services across different hosts. The system uses Flask with **SocketIO** for real-time communication to interact with users through a web interface, allowing them to "break" or "fix" services on virtual machines during the competition.
 
 ## Features
 
@@ -33,6 +33,7 @@ pip install -r requirements.txt
 
 - Modify the `realinv.ini` file to match your hosts and variables.
 - If you are using this for the UB Net Def cybersecurity competition you may use the exisiting file.
+- Make sure to keep the group names or else the Ansible playbooks will not work.
 
 ### 4. Running the Application
 
