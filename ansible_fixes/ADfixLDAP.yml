@@ -1,8 +1,9 @@
 ---
-- name: Stop LDAP on Windows
+- name: Start LDAP on Windows
   hosts: AD
+  gather_facts: no
   tasks:
-    - name: Stop LDAP service
+    - name: Start LDAP service
       win_service:
         name: NTDS
         state: started

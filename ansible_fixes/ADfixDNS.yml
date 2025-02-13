@@ -1,8 +1,9 @@
 ---
-- name: Stop DNS on Windows
+- name: Start DNS on Windows
   hosts: AD
+  gather_facts: no
   tasks:
-    - name: Stop DNS service
+    - name: Start DNS service
       win_service:
         name: dns
         state: started

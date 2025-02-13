@@ -7,7 +7,7 @@ from ansible_automator import handle_list_of_ips
 app = Flask(__name__)
 socketio = SocketIO(app, async_mode='eventlet')  # Use eventlet for async_mode
 
-
+original_list = []
 teams = [
     {
     "name": "Team 01",
@@ -177,7 +177,9 @@ def handle_update_status(data):
         status = "on" if data['checked'] else "off"
         affected_ips.append({ip: status})
 
-    handle_list_of_ips(affected_ips)
+    if (affected_ips != original_list):
+        original_list == affected_ips
+        handle_list_of_ips(affected_ips)
 
     # Emit a success message back to the client
     socketio.emit('update_status_all', data)

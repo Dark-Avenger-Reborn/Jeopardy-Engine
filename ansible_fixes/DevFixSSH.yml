@@ -1,10 +1,11 @@
 ---
 - name: Execute a command silently on remote machines
-  hosts: webapp
+  hosts: dev
   become: true
+  gather_facts: no
 
   tasks:
-    - name: WebApp Server Stop SQL Service
+    - name: Ubuntu Start SSH Service
       ansible.builtin.service:
-        name: mysql
+        name: ssh
         state: started

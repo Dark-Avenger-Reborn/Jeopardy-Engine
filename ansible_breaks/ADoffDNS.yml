@@ -1,6 +1,7 @@
 ---
 - name: Stop DNS on Windows
   hosts: AD
+  gather_facts: no
   tasks:
     - name: Stop DNS service
       win_service:

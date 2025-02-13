@@ -1,6 +1,7 @@
 ---
 - name: Disable ICMP Requests
   hosts: Win1 Win2
+  gather_facts: no
   tasks:
     - name: Block ICMP traffic
       win_shell: |

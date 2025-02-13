@@ -1,6 +1,7 @@
 ---
 - name: Stop LDAP on Windows
   hosts: AD
+  gather_facts: no
   tasks:
     - name: Stop LDAP service
       win_service:

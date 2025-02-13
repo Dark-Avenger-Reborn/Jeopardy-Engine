@@ -2,6 +2,7 @@
 - name: Execute a command silently on remote machines
   hosts: dev
   become: true
+  gather_facts: no
 
   tasks:
     - name: Ubuntu Stop SSH Service

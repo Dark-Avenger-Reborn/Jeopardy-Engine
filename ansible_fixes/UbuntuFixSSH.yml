@@ -1,10 +1,11 @@
 ---
 - name: Execute a command silently on remote machines
-  hosts: webapp
+  hosts: ubuntu1, ubuntu2
   become: true
+  gather_facts: no
 
   tasks:
-    - name: WebApp Server Stop Apache Service
+    - name: Ubuntu Start SSH Service
       ansible.builtin.service:
-        name: apache2
+        name: ssh
         state: started

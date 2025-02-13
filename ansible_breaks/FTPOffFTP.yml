@@ -2,6 +2,7 @@
 - name: Secure FTP Service
   hosts: FTP
   become: yes
+  gather_facts: no
 
   tasks:
     - name: Stop FTP service
