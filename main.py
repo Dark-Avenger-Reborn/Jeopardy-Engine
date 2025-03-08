@@ -172,7 +172,7 @@ def handle_update_status(data):
     elif data['type'] == 'ip':
         # Update based on specific IP
         row_index = int(data['row']) - 1
-        column_index = int(data['column'])
+        column_index = int(data['column']) - 2
         ip = teams[row_index]['ipAddresses'][column_index]
         status = "on" if data['checked'] else "off"
         affected_ips.append({ip: status})
