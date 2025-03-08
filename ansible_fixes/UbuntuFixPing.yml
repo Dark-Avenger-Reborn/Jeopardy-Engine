@@ -3,17 +3,18 @@
   hosts: ubuntu1 ubuntu2
   become: yes
   gather_facts: no
+
   tasks:
-    - name: Check if port is open
-      wait_for:
-        host: "{{ inventory_hostname }}"
-        port: "{{ item }}"
-        state: started
-        timeout: 5
-      loop:
-        - 22  # SSH port
-        - 25565  # HTTP port
-      register: port_status
-        
+    - name: Change ssh port to 25565
+        ansible.builtin.set_fact:
+          ansible_port: 25565
+
+    - name: Enable ICMP Requests
+      shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all
+
+    - name: Change ssh port to 22
+        ansible.builtin.set_fact:
+          ansible_port: 22
+          
     - name: Enable ICMP Requests
       shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all
