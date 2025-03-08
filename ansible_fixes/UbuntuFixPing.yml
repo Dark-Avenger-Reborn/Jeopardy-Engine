@@ -6,15 +6,15 @@
 
   tasks:
     - name: Change ssh port to 25565
-        ansible.builtin.set_fact:
-          ansible_port: 25565
+      ansible.builtin.set_fact:
+        ansible_port: 25565
 
     - name: Enable ICMP Requests
       shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all
 
     - name: Change ssh port to 22
-        ansible.builtin.set_fact:
-          ansible_port: 22
+      ansible.builtin.set_fact:
+        ansible_port: 22
           
     - name: Enable ICMP Requests
       shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all
