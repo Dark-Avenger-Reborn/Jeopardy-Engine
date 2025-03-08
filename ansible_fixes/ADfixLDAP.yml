@@ -1,8 +1,8 @@
 ---
-- name: Start LDAP on Windows
+- name: Fix LDAP Port on Windows
   hosts: AD
   gather_facts: no
   tasks:
-    - name: Force start LDAP service using PowerShell
+    - name: Fix LDAP Port
       win_shell: |
-        Start-Service -Name NTDS
+        netsh advfirewall firewall delete rule name="Block LDAP"

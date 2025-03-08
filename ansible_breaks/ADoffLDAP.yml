@@ -1,8 +1,8 @@
 ---
-- name: Stop LDAP on Windows
+- name: Break LDAP Port on Windows
   hosts: AD
   gather_facts: no
   tasks:
-    - name: Force stop LDAP service using PowerShell
+    - name: Block LDAP Port
       win_shell: |
-        Stop-Service -Name NTDS -Force
+        netsh advfirewall firewall add rule name="Block LDAP" dir=in action=block protocol=TCP localport=389
