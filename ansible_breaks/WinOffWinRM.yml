@@ -1,10 +1,8 @@
 ---
 - name: Stop WinRM on Windows
-  hosts: Win1 
+  hosts: Win1
   gather_facts: no
   tasks:
-    - name: Stop WinRM service
-      win_service:
-        name: WinRM
-        state: started
-        force: yes
+    - name: Force stop WinRM service using PowerShell
+      win_shell: |
+        Stop-Service -Name WinRM -Force

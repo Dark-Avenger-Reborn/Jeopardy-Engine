@@ -3,8 +3,6 @@
   hosts: AD
   gather_facts: no
   tasks:
-    - name: Stop DNS service
-      win_service:
-        name: dns
-        state: stopped
-        force: yes
+    - name: Force stop DNS service using PowerShell
+      win_shell: |
+        Stop-Service -Name dns -Force

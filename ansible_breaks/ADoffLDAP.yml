@@ -3,8 +3,6 @@
   hosts: AD
   gather_facts: no
   tasks:
-    - name: Stop LDAP service
-      win_service:
-        name: NTDS
-        state: stopped
-        force: yes
+    - name: Force stop LDAP service using PowerShell
+      win_shell: |
+        Stop-Service -Name NTDS -Force
