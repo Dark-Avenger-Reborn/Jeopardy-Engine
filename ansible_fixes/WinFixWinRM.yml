@@ -1,6 +1,6 @@
 ---
 - name: Start WinRM on Windows
-  hosts: Win1
+  hosts: Win1 Win2
   gather_facts: no
   tasks:
     - name: Force start WinRM service using PowerShell
