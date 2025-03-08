@@ -7,7 +7,6 @@ from ansible_automator import handle_list_of_ips
 app = Flask(__name__)
 socketio = SocketIO(app, async_mode='eventlet')  # Use eventlet for async_mode
 
-original_list = []
 teams = [
     {
     "name": "Team 01",
@@ -146,6 +145,9 @@ teams = [
     },
 ]
 
+original_list = []
+
+
 @app.route('/')
 def main():
     return render_template('index.html')
@@ -154,6 +156,7 @@ def main():
 def handle_update_status(data):
 
     affected_ips = []
+    global original_list
 
     # Determine the type of update and print the affected IPs
     if data['type'] == 'column':
