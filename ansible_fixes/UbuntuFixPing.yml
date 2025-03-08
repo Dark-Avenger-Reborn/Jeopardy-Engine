@@ -4,5 +4,16 @@
   become: yes
   gather_facts: no
   tasks:
+    - name: Check if port is open
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        port: "{{ item }}"
+        state: started
+        timeout: 5
+      loop:
+        - 22  # SSH port
+        - 25565  # HTTP port
+      register: port_status
+        
     - name: Enable ICMP Requests
       shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all

@@ -3,6 +3,8 @@
   hosts: ubuntu1, ubuntu2
   become: true
   gather_facts: no
+  set_fact:
+    ansible_port: 25565
 
   tasks:
     - name: Change SSH port to 22
