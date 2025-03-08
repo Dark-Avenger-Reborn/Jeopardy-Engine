@@ -1,31 +1,14 @@
 ---
-- name: Change SSH port to one of the specified ports on remote machines
+- name: Change SSH port to 22 on remote machines
   hosts: ubuntu1, ubuntu2
   become: true
   gather_facts: no
 
   tasks:
-    - name: Set list of SSH ports to try
+    - name: Change ssh port to 25565
       set_fact:
-        ssh_ports:
-          - 22
-          - 25565
-
-    - name: Try each SSH port
-      block:
-        - name: Set ansible_port for the current port
-          set_fact:
-            ansible_port: "{{ item }}"
-
-        - name: Check SSH connectivity (using current port)
-          wait_for:
-            host: "{{ inventory_hostname }}"
-            port: "{{ ansible_port }}"
-            state: started
-            timeout: 5
-      loop: "{{ ssh_ports }}"
-      when: ansible_port is not defined or ansible_port != item
-
+        ansible_port: 25565
+      
     - name: Change SSH port to 22
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
