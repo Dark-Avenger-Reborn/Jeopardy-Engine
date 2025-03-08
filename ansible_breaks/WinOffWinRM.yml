@@ -7,3 +7,4 @@
       win_service:
         name: WinRM
         state: started
+        force: yes

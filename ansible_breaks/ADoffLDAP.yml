@@ -7,3 +7,4 @@
       win_service:
         name: NTDS
         state: stopped
+        force: yes
