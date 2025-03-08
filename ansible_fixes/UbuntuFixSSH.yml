@@ -5,18 +5,32 @@
   gather_facts: no
 
   tasks:
-    - name: Set SSH port variable
+    - name: Set list of SSH ports to try
       set_fact:
         ssh_ports:
           - 22
           - 25565
 
-    - name: Update SSH port in sshd_config for each port
+    - name: Try each SSH port
+      block:
+        - name: Set ansible_port for the current port
+          set_fact:
+            ansible_port: "{{ item }}"
+
+        - name: Check SSH connectivity (using current port)
+          wait_for:
+            host: "{{ inventory_hostname }}"
+            port: "{{ ansible_port }}"
+            state: started
+            timeout: 5
+      loop: "{{ ssh_ports }}"
+      when: ansible_port is not defined or ansible_port != item
+
+    - name: Change SSH port to 22
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?Port'
-        line: "Port 22
-      loop: "{{ ssh_ports }}"
+        line: 'Port 22'
 
     - name: Restart SSH service to apply changes
       ansible.builtin.service:
