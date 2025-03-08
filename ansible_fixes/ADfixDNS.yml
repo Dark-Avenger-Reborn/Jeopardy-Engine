@@ -3,7 +3,6 @@
   hosts: AD
   gather_facts: no
   tasks:
-    - name: Start DNS service
-      win_service:
-        name: dns
-        state: started
+    - name: Force start DNS service using PowerShell
+      win_shell: |
+        Start-Service -Name dns -Force

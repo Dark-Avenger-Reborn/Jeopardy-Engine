@@ -3,7 +3,6 @@
   hosts: AD
   gather_facts: no
   tasks:
-    - name: Start LDAP service
-      win_service:
-        name: NTDS
-        state: started
+    - name: Force start LDAP service using PowerShell
+      win_shell: |
+        Start-Service -Name NTDS -Force

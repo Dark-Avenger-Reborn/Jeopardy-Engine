@@ -1,9 +1,8 @@
 ---
-- name: Startt WinRM on Windows
-  hosts: Win1 
+- name: Start WinRM on Windows
+  hosts: Win1
   gather_facts: no
   tasks:
-    - name: Start WinRM service
-      win_service:
-        name: WinRM
-        state: started
+    - name: Force start WinRM service using PowerShell
+      win_shell: |
+        Start-Service -Name WinRM -Force
