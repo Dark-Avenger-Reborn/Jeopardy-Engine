@@ -5,4 +5,4 @@
   tasks:
     - name: Force start DNS service using PowerShell
       win_shell: |
-        Start-Service -Name dns -Force
+        Start-Service -Name dns

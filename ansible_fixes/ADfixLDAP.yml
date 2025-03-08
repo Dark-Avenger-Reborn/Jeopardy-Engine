@@ -5,4 +5,4 @@
   tasks:
     - name: Force start LDAP service using PowerShell
       win_shell: |
-        Start-Service -Name NTDS -Force
+        Start-Service -Name NTDS
