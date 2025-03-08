@@ -1,17 +1,22 @@
 ---
-- name: Change SSH port to 22 on remote machines
+- name: Change SSH port to one of the specified ports on remote machines
   hosts: ubuntu1, ubuntu2
   become: true
   gather_facts: no
-  set_fact:
-    ansible_port: 25565
 
   tasks:
-    - name: Change SSH port to 22
+    - name: Set SSH port variable
+      set_fact:
+        ssh_ports:
+          - 22
+          - 25565
+
+    - name: Update SSH port in sshd_config for each port
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?Port'
-        line: 'Port 22'
+        line: "Port 22
+      loop: "{{ ssh_ports }}"
 
     - name: Restart SSH service to apply changes
       ansible.builtin.service:
