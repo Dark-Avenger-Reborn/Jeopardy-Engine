@@ -335,7 +335,7 @@ def handle_list_of_ips(ip_list):
             action_type = get_service_from_ip(ip)
             if status == "on":
                 print(action_map[action_type]["break"])
-                threading.Thread(target=action_map[action_type]["break"], args=(ip,)).start()
+                threading.Thread(target=action_map[action_type]["break"], args=(ip.split(":")[0],)).start()
             else:
                 print(action_map[action_type]["fix"])
-                threading.Thread(target=action_map[action_type]["fix"], args=(ip,)).start()
+                threading.Thread(target=action_map[action_type]["fix"], args=(ip.split(":")[0],)).start()
