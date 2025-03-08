@@ -1,20 +1,21 @@
 ---
-- name: Enable ICMP Echo Requests
-  hosts: ubuntu1 ubuntu2
+- name: Enable ICMP Echo Requests with SSH Port Fallback
+  hosts: ubuntu1, ubuntu2
   become: yes
   gather_facts: no
 
   tasks:
-    - name: Change ssh port to 25565
-      ansible.builtin.set_fact:
-        ansible_port: 25565
-
-    - name: Enable ICMP Requests
-      shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all
-
-    - name: Change ssh port to 22
-      ansible.builtin.set_fact:
-        ansible_port: 22
+    - name: Try SSH on port 22
+      block:
+        - name: Enable ICMP Requests
+          shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all
+          vars:
+            ansible_ssh_port: 22
           
-    - name: Enable ICMP Requests
-      shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all
+      rescue:
+        - name: SSH failed on port 22, switching to port 25565
+          block:
+            - name: Enable ICMP Requests on port 25565
+              shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all
+              vars:
+                ansible_ssh_port: 25565
