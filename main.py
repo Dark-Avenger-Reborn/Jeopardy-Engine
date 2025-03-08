@@ -181,7 +181,7 @@ def handle_update_status(data):
         affected_ips.append({ip: status})
 
     if (affected_ips != original_list):
-        original_list == affected_ips
+        original_list = affected_ips
         handle_list_of_ips(affected_ips)
 
     # Emit a success message back to the client
