@@ -6,7 +6,7 @@
 
   tasks:
     - name: Change ssh port to 25565
-      set_fact:
+      ansible.builtin.set_fact:
         ansible_port: 25565
       
     - name: Change SSH port to 22
