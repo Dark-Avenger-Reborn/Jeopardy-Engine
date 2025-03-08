@@ -1,11 +1,17 @@
 ---
-- name: Execute a command silently on remote machines
+- name: Change SSH port to 25565 on remote machines
   hosts: ubuntu1, ubuntu2
   become: true
   gather_facts: no
 
   tasks:
-    - name: Ubuntu Stop SSH Service
+    - name: Change SSH port to 25565
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Port'
+        line: 'Port 25565'
+
+    - name: Restart SSH service to apply changes
       ansible.builtin.service:
         name: ssh
-        state: stopped
+        state: restarted
