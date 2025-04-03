@@ -1,4 +1,4 @@
-# Jeopardy Engine 🚀
+# EvilEngine 🚀
 
 A tool to manage and automate services during the [Lockdown Cybersecurity Competition](https://lockdown.ubnetdef.org/) using Ansible playbooks. This repository enables real-time service management via a Flask web application.
 
@@ -14,7 +14,7 @@ This repository contains code designed to manage and automate various tasks rela
 - **Web interface** for easy interaction to control services. 🌐
 - **Break and fix playbooks** for controlling the state of services on remote hosts. ⚙️
 
-## Setup
+## Setup Process
 
 ### 1. Clone the repository
 
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 ### 3. Configure Ansible Inventory
 
 - Modify the `realinv.ini` file to match your hosts and variables.
-- If you are using this for the UB Net Def cybersecurity competition you may use the exisiting file.
+- If you are using this for the UB Net Def cybersecurity competition you may use the existing file.
 - Make sure to keep the group names or else the Ansible playbooks will not work.
 
 ### 4. Running the Application
@@ -47,7 +47,7 @@ Access the app by visiting `http://localhost:5000` in your web browser. 🌍
 
 ## How It Works
 
-- The application allows users to interact with a Scoring Engine replicate which allows them to controll services in real-time during the competition. 🎮
+- The application allows users to interact with a Scoring Engine replicate, allowing them to control services in real-time during the competition. 🎮
 - Users can toggle the "break" or "fix" state of services using checkboxes.
 - Each action triggers the execution of an Ansible playbook to stop or start services.
 - The web interface updates live as the state of services changes. 🔧
