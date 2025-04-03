@@ -66,22 +66,6 @@ def DevFixPing(limit_hosts=None):
         limit=limit_hosts
     )
 
-def DevOffSSH(limit_hosts=None):
-    return ansible_runner.run(
-        private_data_dir='./',
-        inventory="./realinv.ini",
-        playbook="./ansible_breaks/DevOffSSH.yml",
-        limit=limit_hosts
-    )
-
-def DevFixSSH(limit_hosts=None):
-    return ansible_runner.run(
-        private_data_dir='./',
-        inventory="./realinv.ini",
-        playbook="./ansible_fixes/DevFixSSH.yml",
-        limit=limit_hosts
-    )
-
 def FTPOffFTP(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./',
@@ -200,7 +184,7 @@ action_map = {
     "AD_LDAP": {"break": ADoffLDAP, "fix": ADfixLDAP},
     "Backup_HTTP": {"break": BackupOffHTTP, "fix": BackupFixHTTP},
     "Dev_Ping": {"break": DevOffPing, "fix": DevFixPing},
-    "Dev_SSH": {"break": DevOffSSH, "fix": DevFixSSH},
+    #"Dev_SSH": {"break": DevOffSSH, "fix": DevFixSSH},
     "FTP": {"break": FTPOffFTP, "fix": FTPFixFTP},
     "Ubuntu_Ping": {"break": UbuntuOffPing, "fix": UbuntuFixPing},
     "Ubuntu_SSH": {"break": UbuntuOffSSH, "fix": UbuntuFixSSH},
