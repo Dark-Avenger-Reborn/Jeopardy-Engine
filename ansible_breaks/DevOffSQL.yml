@@ -1,0 +1,24 @@
+---
+- name: DevServer dual break
+  hosts: dev
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Change SQL Server port
+      lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: '^port'
+        line: 'port = 3307'
+        state: present
+      notify: Restart MySQL
+
+    - name: Stop SQL Server service
+      systemd:
+        name: mysql
+        state: stopped
+
+  handlers:
+    - name: Restart MySQL
+      systemd:
+        name: mysql
+        state: restarted

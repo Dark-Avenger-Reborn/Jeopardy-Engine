@@ -65,6 +65,22 @@ def DevFixPing(limit_hosts=None):
         playbook="./ansible_fixes/DevFixPing.yml",
         limit=limit_hosts
     )
+    
+def DevOffSQL(limit_hosts=None):
+    return ansible_runner.run(
+        private_data_dir='./',
+        inventory="./realinv.ini",
+        playbook="./ansible_fixes/DevOffSQL.yml",
+        limit=limit_hosts
+    )
+    
+def DevFixSQL(limit_hosts=None):
+    return ansible_runner.run(
+        private_data_dir='./',
+        inventory="./realinv.ini",
+        playbook="./ansible_fixes/DevFixSQL.yml",
+        limit=limit_hosts
+    )
 
 def FTPOffFTP(limit_hosts=None):
     return ansible_runner.run(
@@ -184,7 +200,7 @@ action_map = {
     "AD_LDAP": {"break": ADoffLDAP, "fix": ADfixLDAP},
     "Backup_HTTP": {"break": BackupOffHTTP, "fix": BackupFixHTTP},
     "Dev_Ping": {"break": DevOffPing, "fix": DevFixPing},
-    #"Dev_SSH": {"break": DevOffSSH, "fix": DevFixSSH},
+    "Dev_SQL": {"break": DevOffSQL, "fix": DevFixSQL},
     "FTP": {"break": FTPOffFTP, "fix": FTPFixFTP},
     "Ubuntu_Ping": {"break": UbuntuOffPing, "fix": UbuntuFixPing},
     "Ubuntu_SSH": {"break": UbuntuOffSSH, "fix": UbuntuFixSSH},
@@ -201,7 +217,7 @@ def get_service_from_ip(ip):
         2: "AD_LDAP",       # LDAP
         3: "Backup_HTTP",   # HTTP
         4: "Dev_Ping",      # DevServer: PING
-        5: "Dev_SSH",       # DevServer: SSH
+        5: "Dev_SQL",       # DevServer: SQL
         6: "FTP",           # UbuntuFTP: FTP
         7: "Ubuntu_Ping",   # Ubuntu1: PING
         8: "Ubuntu_SSH",    # Ubuntu1: SSH
