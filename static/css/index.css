@@ -3,73 +3,95 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-  }
+}
 
-  body {
-    font-family: 'Arial', sans-serif;
-    background-color: #212121; /* Dark background */
-    color: #fff; /* White text for contrast */
-    padding: 20px;
-  }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #1d1d1d; /* Dark theme */
+    color: #f4f4f4; /* Light text */
+    padding: 40px;
+}
 
-  h1 {
+h1 {
     text-align: center;
     margin-bottom: 20px;
-    color: #fff;
-  }
+    color: #ff6347; /* Soft red for the title */
+    font-size: 2.5rem;
+}
 
-  h2 {
+h2 {
     text-align: center;
-  }
+    font-size: 1.1rem;
+    color: #ddd;
+    margin-bottom: 40px;
+    font-weight: normal;
+}
 
-  table {
-    border-collapse: collapse;
+/* Table Styles */
+table {
     width: 100%;
-    table-layout: fixed; /* Ensures consistent column widths */
-    background-color: #333; /* Dark table background */
-    border-radius: 8px;
+    border-collapse: collapse;
+    background-color: #2e2e2e; /* Darker table background */
+    border-radius: 12px;
     overflow: hidden;
-    margin: auto;
-  }
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
 
-  thead th {
-    background-color: #444; /* Slightly lighter dark for headers */
+thead {
+    background-color: #333; /* Slightly darker header */
+}
+
+thead th {
     color: #fff;
-    padding: 10px;
-    font-size: 14px;
+    padding: 12px;
+    font-size: 1rem;
     text-align: center;
-  }
+    font-weight: bold;
+    border-bottom: 2px solid #444;
+}
 
-  tbody td {
-    padding: 8px;
+tbody td {
+    padding: 10px 12px;
     text-align: center;
-    font-size: 13px;
-    border: 1px solid #555; /* Subtle border between cells */
-    transition: background-color 0.3s ease;
-  }
+    font-size: 0.95rem;
+    border-bottom: 1px solid #444;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
 
-  tbody th {
-    background-color: #444;
+tbody tr:hover td {
+    background-color: #444; /* Light dark highlight on hover */
+}
+
+tbody td span {
+    font-size: 0.9rem;
+    display: block;
+    margin-top: 6px;
+}
+
+tbody th {
+    background-color: #333;
     color: #fff;
-    padding: 10px;
+    padding: 12px;
     text-align: left;
-    font-size: 14px;
-    border-right: 1px solid #555;
-  }
+    font-weight: normal;
+}
 
-  /* Green Background */
-  .green {
-    background-color: #1b5e20; /* Vibrant green */
+/* Green and Red for Active/Inactive States */
+.green {
+    background-color: #1b5e20;
     color: #fff;
-  }
+    transition: background-color 0.3s ease;
+}
 
-  .red {
-    background-color: #FF0000; /* Vibrant red */
+.red {
+    background-color: #d32f2f; /* Vibrant red */
     color: #fff;
-  }
+    transition: background-color 0.3s ease;
+}
 
-  /* Checkbox Styling */
-  .styled-checkbox {
+/* Checkbox Styles */
+.styled-checkbox {
     position: relative;
     width: 18px;
     height: 18px;
@@ -79,15 +101,15 @@
     border-radius: 4px;
     background-color: #444;
     transition: all 0.3s ease;
-  }
+    margin: 0 auto;
+}
 
-  .styled-checkbox:checked {
-    background-color: #444;
-    border-color: #888;
-    position: relative;
-  }
+.styled-checkbox:checked {
+    background-color: #2e7d32; /* Green when checked */
+    border-color: #1b5e20;
+}
 
-  .styled-checkbox:checked::after {
+.styled-checkbox:checked::after {
     content: "✔";
     font-size: 14px;
     color: #fff;
@@ -95,46 +117,67 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-  }
+}
 
-  /* Add this new style for IP checkboxes */
-  .ip-checkbox {
-    margin-right: 5px;
-    vertical-align: middle;
-  }
+/* Row Checkbox Alignment */
+.row-checkbox {
+    margin: 0;
+    padding: 0;
+}
 
-  /* Adjust cell padding to accommodate the checkbox */
-  tbody td {
-    padding: 8px 4px;
-    text-align: left; /* Change to left alignment */
-  }
+/* Table Column/Row Layout */
+table th, table td {
+    text-align: center;
+}
 
-  /* Dark Theme Scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-  }
+table td input[type="checkbox"] {
+    margin-left: 6px;
+}
 
-  ::-webkit-scrollbar-track {
+.ip-checkbox {
+    margin-right: 6px;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
     background: #212121;
-  }
+}
 
-  ::-webkit-scrollbar-thumb {
-    background: #555;
-  }
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
 
-  /* Responsive Table */
-  @media (max-width: 768px) {
+/* Hover Effect on Checkboxes */
+.styled-checkbox:hover {
+    border-color: #ff6347;
+}
+
+.styled-checkbox:checked:hover {
+    background-color: #388e3c; /* Darker green when hovering over a checked box */
+}
+
+/* Responsive Table */
+@media (max-width: 768px) {
+    body {
+        padding: 20px;
+    }
+
     table {
-      font-size: 12px;
+        font-size: 0.85rem;
     }
 
     thead th {
-      font-size: 12px;
-      padding: 8px;
+        font-size: 0.9rem;
+        padding: 8px;
     }
 
     tbody td, tbody th {
-      padding: 6px;
-      font-size: 11px;
+        padding: 6px;
+        font-size: 0.9rem;
     }
-  }
+}
