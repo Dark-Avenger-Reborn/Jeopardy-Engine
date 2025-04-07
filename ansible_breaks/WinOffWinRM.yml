@@ -1,8 +1,16 @@
 ---
-- name: Stop WinRM on Windows
+- name: Disable TikTok and Instagram domain accounts
   hosts: Win1 Win2
   gather_facts: no
   tasks:
-    - name: Force stop WinRM service using PowerShell
+    - name: Disable TikTok domain account
       win_shell: |
-        Stop-Service -Name WinRM -Force
+        Import-Module ActiveDirectory
+        Disable-ADAccount -Identity "media\\TikTok"
+      ignore_errors: yes
+
+    - name: Disable Instagram domain account
+      win_shell: |
+        Import-Module ActiveDirectory
+        Disable-ADAccount -Identity "media\\Instagram"
+      ignore_errors: yes

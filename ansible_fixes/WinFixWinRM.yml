@@ -1,8 +1,16 @@
 ---
-- name: Start WinRM on Windows
+- name: Re-enable TikTok and Instagram domain accounts
   hosts: Win1 Win2
   gather_facts: no
   tasks:
-    - name: Force start WinRM service using PowerShell
+    - name: Enable TikTok domain account
       win_shell: |
-        Start-Service -Name WinRM
+        Import-Module ActiveDirectory
+        Enable-ADAccount -Identity "media\\TikTok"
+      ignore_errors: yes
+
+    - name: Enable Instagram domain account
+      win_shell: |
+        Import-Module ActiveDirectory
+        Enable-ADAccount -Identity "media\\Instagram"
+      ignore_errors: yes
