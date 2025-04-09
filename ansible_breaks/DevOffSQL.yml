@@ -17,7 +17,6 @@
         name: mysql
         state: stopped
 
-  handlers:
     - name: Restart MySQL
       systemd:
         name: mysql

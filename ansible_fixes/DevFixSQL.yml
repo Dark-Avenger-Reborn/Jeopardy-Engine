@@ -17,7 +17,7 @@
       changed_when: false
       failed_when: mysql_config_check.rc != 0
 
-    - name: Restart MySQL Server service
+    - name: Restart MySQL
       systemd:
         name: mysql
         state: restarted
