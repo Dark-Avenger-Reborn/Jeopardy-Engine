@@ -70,7 +70,7 @@ def DevOffSQL(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./',
         inventory="./realinv.ini",
-        playbook="./ansible_fixes/DevOffSQL.yml",
+        playbook="./ansible_breaks/DevOffSQL.yml",
         limit=limit_hosts
     )
     
