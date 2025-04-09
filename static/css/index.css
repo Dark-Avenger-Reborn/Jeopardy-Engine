@@ -63,9 +63,24 @@ tbody tr:hover td {
     background-color: #444; /* Light dark highlight on hover */
 }
 
-tbody th:hover td {
-    background-color: #444; /* Light dark highlight on hover */
+tbody tr:hover td:nth-child(1),
+tbody tr:hover td:nth-child(2),
+tbody tr:hover td:nth-child(3),
+tbody tr:hover td:nth-child(4),
+tbody tr:hover td:nth-child(5),
+tbody tr:hover td:nth-child(6),
+tbody tr:hover td:nth-child(7),
+tbody tr:hover td:nth-child(8),
+tbody tr:hover td:nth-child(9),
+tbody tr:hover td:nth-child(10),
+tbody tr:hover td:nth-child(11),
+tbody tr:hover td:nth-child(12),
+tbody tr:hover td:nth-child(13),
+tbody tr:hover td:nth-child(14),
+tbody tr:hover td:nth-child(15) {
+    background-color: #444;
 }
+
 
 tbody td span {
     font-size: 0.9rem;
