@@ -7,6 +7,14 @@ from ansible_automator import handle_list_of_ips
 app = Flask(__name__)
 socketio = SocketIO(app, async_mode='eventlet')  # Use eventlet for async_mode
 
+def get_credentials():
+    try:
+        with open("config.json", "r") as file:
+            credentials = json.load(file)
+        return credentials
+    except FileNotFoundError:
+        return None
+
 teams = [
     {
     "name": "Team 01",
@@ -189,4 +197,4 @@ def handle_update_status(data):
 
 if __name__ == '__main__':
     # Use eventlet's WSGI server to run the app
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 5000)), app)
+    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', get_credentials()["port"])), app)
