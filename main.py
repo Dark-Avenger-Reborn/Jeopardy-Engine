@@ -2,6 +2,7 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 import eventlet
 from ansible_automator import handle_list_of_ips
+import json
 
 # Create the Flask app and initialize SocketIO with eventlet
 app = Flask(__name__)
