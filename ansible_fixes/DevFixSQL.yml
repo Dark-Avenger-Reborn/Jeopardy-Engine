@@ -16,7 +16,7 @@
       register: mysql_config_check
       changed_when: false
       failed_when: mysql_config_check.rc != 0
-      
+  handlers:
     - name: Restart MySQL
       systemd:
         name: mysql
