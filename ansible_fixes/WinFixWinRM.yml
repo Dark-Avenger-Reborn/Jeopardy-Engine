@@ -1,6 +1,6 @@
 ---
 - name: Re-enable TikTok and Instagram domain accounts
-  hosts: AD
+  hosts: all
   gather_facts: no
   tasks:
     - name: Enable TikTok domain account
