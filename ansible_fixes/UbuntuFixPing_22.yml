@@ -5,15 +5,9 @@
   gather_facts: no
 
   tasks:
-    - name: Change ssh port to 25565
+    - name: Change ssh port to 22
       ansible.builtin.set_fact:
-        ansible_port: 25565
-      
-    - name: Change SSH port to 22
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: '^#?Port'
-        line: 'Port 22'
+        ansible_port: 22
 
     - name: Fix SSH break
       shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all

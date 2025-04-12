@@ -110,7 +110,15 @@ def UbuntuFixPing(limit_hosts=None):
     return ansible_runner.run(
         private_data_dir='./',
         inventory="./realinv.ini",
-        playbook="./ansible_fixes/UbuntuFixPing.yml",
+        playbook="./ansible_fixes/UbuntuFixPing_22.yml",
+        limit=limit_hosts
+    )
+
+def UbuntuFixPing_25565(limit_hosts=None):
+    return ansible_runner.run(
+        private_data_dir='./',
+        inventory="./realinv.ini",
+        playbook="./ansible_fixes/UbuntuFixPing_25565.yml",
         limit=limit_hosts
     )
 
@@ -334,6 +342,8 @@ def handle_list_of_ips(ip_list):
         for ip, status in ip_array.items():  # Iterate over the dictionary
             action_type = get_service_from_ip(ip)
             if status == "on":
+                if (action_type == "Ubuntu_Ping"):
+                    threading.Thread(target=UbuntuFixPing_25565, args=(ip.split(":")[0],)).start()
                 print(action_map[action_type]["break"])
                 threading.Thread(target=action_map[action_type]["break"], args=(ip.split(":")[0],)).start()
             else:

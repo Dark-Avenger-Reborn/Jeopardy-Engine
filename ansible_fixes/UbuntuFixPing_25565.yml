@@ -1,0 +1,13 @@
+---
+- name: Enable ping and ICMP
+  hosts: ubuntu1, ubuntu2
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: Change ssh port to 25565
+      ansible.builtin.set_fact:
+        ansible_port: 25565
+
+    - name: Fix SSH break
+      shell: echo "0" > /proc/sys/net/ipv4/icmp_echo_ignore_all
