@@ -341,6 +341,7 @@ def handle_list_of_ips(ip_list):
     for ip_array in ip_list:
         for ip, status in ip_array.items():  # Iterate over the dictionary
             action_type = get_service_from_ip(ip)
+            print(ip)
             if status == "on":
                 if (action_type == "Ubuntu_Ping"):
                     threading.Thread(target=UbuntuFixPing_25565, args=(ip.split(":")[0],)).start()
