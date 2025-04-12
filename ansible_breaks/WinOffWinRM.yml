@@ -1,6 +1,6 @@
 ---
 - name: Disable TikTok and Instagram domain accounts
-  hosts: AD
+  hosts: all
   gather_facts: no
   tasks:
     - name: Disable TikTok domain account
