@@ -1,0 +1,13 @@
+temp file
+do not remove
+
+contents of each json file
+- Contain ip area
+- Contain Break info
+{
+    "lv1_breaks": {
+        "10.x.1.10:22": "command to break ssh",
+        "10.x.1.10": "command to break icmp",
+    }
+}
+
