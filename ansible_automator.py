@@ -1,6 +1,24 @@
 import ansible_runner
 import threading
 
+#Level 1 "breaks" and "Fixes" actions
+def temp(limit_hosts=None):
+    return ansible_runner.run(
+        private_data_dir='./',
+        inventory="./realinv.ini",
+        playbook="./BreakLevel/",
+        limit=limit_hosts
+    )
+
+#Level 2 "breaks" and "Fixes" actions
+
+
+#Level 3 "breaks" and "Fixes" actions
+
+
+#Level 4 "breaks" and "Fixes" actions
+
+
 # Define all playbook functions for "breaks" actions
 def ADoffDNS(limit_hosts=None):
     return ansible_runner.run(
