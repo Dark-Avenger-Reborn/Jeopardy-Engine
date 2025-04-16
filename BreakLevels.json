@@ -1,39 +1,150 @@
 {
-    "breask": {
-        "lv1_breaks":
-        {
-            
+    "breaks": {
+        "lvl1": {
+            "10.x.1.60": "Stop-Service -Name dnscache -Force",
+            "10.x.1.60:389": "Stop-Service -Name NTDS -Force",
+            "10.x.2.2:80": "sudo ufw deny 80/tcp",
+            "10.x.2.10": "sudo iptables -A INPUT -p icmp --icmp-type echo-request -j DROP",
+            "10.x.2.10:22": "sudo ufw deny 3306/tcp",
+            "10.x.2.4:21": "sudo ufw deny 21/tcp",
+            "10.x.1.10": "sudo ufw deny icmp",
+            "10.x.1.10:22": "sudo ufw deny 22/tcp",
+            "10.x.1.40": "sudo ufw deny icmp",
+            "10.x.1.40:22": "sudo ufw deny 22/tcp",
+            "10.x.1.30:80": "",
+            "10.x.1.30:3306": "",
+            "10.x.1.70": "New-NetFirewallRule -DisplayName 'Block ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block",
+            "10.x.1.70:5985": "New-NetFirewallRule -DisplayName 'Block Remote WinRM Access' -Protocol TCP -LocalPort 5985 -Action Block",
+            "10.x.1.80": "New-NetFirewallRule -DisplayName 'Block ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block",
+            "10.x.1.80:5985": "New-NetFirewallRule -DisplayName 'Block Remote WinRM Access' -Protocol TCP -LocalPort 5985 -Action Block"
         },
-        "lv2_breaks":
-        {
-            
+        "lvl2": {
+            "10.x.1.60": "Stop-Service -Name DNS; Set-Service -Name DNS -StartupType Disabled -Force",
+            "10.x.1.60:389": "New-NetFirewallRule -DisplayName 'Block LDAP' -Direction Inbound -Protocol TCP -LocalPort 389 -Action Block",
+            "10.x.2.2:80": "sudo systemctl disable apache2",
+            "10.x.2.10": "sudo iptables -A OUTPUT -p icmp --icmp-type echo-request -j DROP",
+            "10.x.2.10:22": "sudo sed -i 's/^bind-address.*/bind-address = 127.0.0.1/' /etc/mysql/mysql.conf.d/mysqld.cnf && sudo systemctl restart mysql",
+            "10.x.2.4:21": "sudo sed -i 's/^#listen_port=.*/listen_port=2222/' /etc/vsftpd.conf && sudo systemctl restart vsftpd",
+            "10.x.1.10": "sudo iptables -A OUTPUT -p icmp --icmp-type echo-request -j REJECT",
+            "10.x.1.10:22": "sudo sed -i 's/^#Port 22/Port 2222/' /etc/ssh/sshd_config && sudo systemctl restart ssh",
+            "10.x.1.40": "sudo iptables -A OUTPUT -p icmp --icmp-type echo-request -j REJECT",
+            "10.x.1.40:22": "sudo sed -i 's/^#Port 22/Port 2222/' /etc/ssh/sshd_config && sudo systemctl restart ssh",
+            "10.x.1.30:80": "",
+            "10.x.1.30:3306": "",
+            "10.x.1.70": "New-NetFirewallRule -DisplayName 'Block ICMP Both Ways' -Protocol ICMPv4 -Action Block",
+            "10.x.1.70:5985": "Stop-Service -Name WinRM -Force",
+            "10.x.1.80": "New-NetFirewallRule -DisplayName 'Block ICMP Both Ways' -Protocol ICMPv4 -Action Block",
+            "10.x.1.80:5985": "Stop-Service -Name WinRM -Force"
         },
-        "lv3_breaks":
-        {
-            
+        "lvl3": {
+            "10.x.1.60": "Set-DnsClientServerAddress -InterfaceAlias 'Ethernet' -ServerAddresses 0.0.0.0",
+            "10.x.1.60:389": "Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Parameters' -Name 'LDAP Port' -Value 12345",
+            "10.x.2.2:80": "sudo a2dissite 000-default.conf && sudo systemctl reload apache2",
+            "10.x.2.10": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=1",
+            "10.x.2.10:22": "mysqldump -u root -p --databases <database_name> > /tmp/user_database_dump.sql",
+            "10.x.2.4:21": "sudo sed -i 's/^#max_clients.*/max_clients=0/' /etc/vsftpd.conf && sudo systemctl restart vsftpd",
+            "10.x.1.10": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=1",
+            "10.x.1.10:22": "sudo systemctl stop ssh",
+            "10.x.1.40": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=1",
+            "10.x.1.40:22": "sudo systemctl stop ssh",
+            "10.x.1.30:80": "",
+            "10.x.1.30:3306": "",
+            "10.x.1.70": "New-NetFirewallRule -DisplayName 'Delay ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block; netsh interface ipv4 set subinterface "Ethernet" mtu=1200",
+            "10.x.1.70:5985": "New-NetFirewallRule -DisplayName 'Block WinRM Port 5985' -Protocol TCP -LocalPort 5985 -Action Block",
+            "10.x.1.80": "New-NetFirewallRule -DisplayName 'Delay ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block; netsh interface ipv4 set subinterface "Ethernet" mtu=1200",
+            "10.x.1.80:5985": "New-NetFirewallRule -DisplayName 'Block WinRM Port 5985' -Protocol TCP -LocalPort 5985 -Action Block"
         },
-        "lv4_breaks":
-        {
-            
+        "lvl4": {
+            "10.x.1.60": "Remove-DnsServerResourceRecord -ZoneName 'media.lockdown' -Name 'MEDIA' -RRType 'A' -Force",
+            "10.x.1.60:389": "Stop-Service -Name NTDS; Remove-Item -Path 'C:\Windows\NTDS\ntds.dit' -Force; Start-Service -Name NTDS",
+            "10.x.2.2:80": "sudo rm -rf /var/www/html",
+            "10.x.2.10": "sudo rm /bin/ping",
+            "10.x.2.10:22": "sudo rm -rf /var/lib/mysql/*",
+            "10.x.2.4:21": "sudo apt-get purge --auto-remove vsftpd -y",
+            "10.x.1.10": "sudo rm -f /bin/ping",
+            "10.x.1.10:22": "sudo apt-get purge --auto-remove openssh-server -y",
+            "10.x.1.40": "sudo rm -f /bin/ping",
+            "10.x.1.40:22": "sudo apt-get purge --auto-remove openssh-server -y",
+            "10.x.1.30:80": "",
+            "10.x.1.30:3306": "",
+            "10.x.1.70": "netsh int ip reset C:\resetlog.txt; netsh winsock reset",
+            "10.x.1.70:5985": "takeown /f '%SystemRoot%\System32\winrm.cmd" && icacls "%SystemRoot%\System32\winrm.cmd' /grant administrators:F && del '%SystemRoot%\System32\winrm.cmd'",
+            "10.x.1.80": "netsh int ip reset C:\resetlog.txt; netsh winsock reset",
+            "10.x.1.80:5985": "takeown /f '%SystemRoot%\System32\winrm.cmd" && icacls "%SystemRoot%\System32\winrm.cmd' /grant administrators:F && del '%SystemRoot%\System32\winrm.cmd'"
         }
-
     },
-    "Fixes": {
-        "lv1_fixes":
-        {
-            
+    "fixs": {
+        "lvl1": {
+            "10.x.1.60": "Start-Service -Name dnscache -Force",
+            "10.x.1.60:389": "Start-Service -Name NTDS -Force",
+            "10.x.2.2:80": "sudo ufw allow 80/tcp",
+            "10.x.2.10": "sudo iptables -D INPUT -p icmp --icmp-type echo-request -j DROP",
+            "10.x.2.10:22": "sudo ufw allow 3306/tcp",
+            "10.x.2.4:21": "sudo ufw allow 21/tcp",
+            "10.x.1.10": "sudo ufw allow icmp",
+            "10.x.1.10:22": "sudo ufw allow 22/tcp",
+            "10.x.1.40": "sudo ufw allow icmp",
+            "10.x.1.40:22": "sudo ufw allow 22/tcp",
+            "10.x.1.30:80": "",
+            "10.x.1.30:3306": "",
+            "10.x.1.70": "Remove-NetFirewallRule -DisplayName 'Block ICMP Echo Replies'",
+            "10.x.1.70:5985": "Remove-NetFirewallRule -DisplayName 'Block Remote WinRM Access'",
+            "10.x.1.80": "Remove-NetFirewallRule -DisplayName 'Block ICMP Echo Replies'",
+            "10.x.1.80:5985": "Remove-NetFirewallRule -DisplayName 'Block Remote WinRM Access'"
         },
-        "lv2_fixes":
-        {
-            
+        "lvl2": {
+            "10.x.1.60": "Set-Service -Name DNS -StartupType Automatic; Start-Service -Name DNS -Force",
+            "10.x.1.60:389": "Remove-NetFirewallRule -DisplayName 'Block LDAP'",
+            "10.x.2.2:80": "sudo systemctl enable apache2",
+            "10.x.2.10": "sudo iptables -D OUTPUT -p icmp --icmp-type echo-request -j DROP",
+            "10.x.2.10:22": "sudo sed -i 's/^bind-address.*/bind-address = 0.0.0.0/' /etc/mysql/mysql.conf.d/mysqld.cnf && sudo systemctl restart mysql",
+            "10.x.2.4:21": "sudo sed -i 's/^listen_port=.*/listen_port=21/' /etc/vsftpd.conf && sudo systemctl restart vsftpd",
+            "10.x.1.10": "sudo iptables -D OUTPUT -p icmp --icmp-type echo-request -j REJECT",
+            "10.x.1.10:22": "sudo sed -i 's/^Port 2222/Port 22/' /etc/ssh/sshd_config && sudo systemctl restart ssh",
+            "10.x.1.40": "sudo iptables -D OUTPUT -p icmp --icmp-type echo-request -j REJECT",
+            "10.x.1.40:22": "sudo sed -i 's/^Port 2222/Port 22/' /etc/ssh/sshd_config && sudo systemctl restart ssh",
+            "10.x.1.30:80": "",
+            "10.x.1.30:3306": "",
+            "10.x.1.70": "Remove-NetFirewallRule -DisplayName 'Block ICMP Both Ways'",
+            "10.x.1.70:5985": "Start-Service -Name WinRM -Force",
+            "10.x.1.80": "Remove-NetFirewallRule -DisplayName 'Block ICMP Both Ways'",
+            "10.x.1.80:5985": "Start-Service -Name WinRM -Force"
         },
-        "lv3_fixes":
-        {
-            
+        "lvl3": {
+            "10.x.1.60": "Set-DnsClientServerAddress -InterfaceAlias 'Ethernet' -ServerAddresses 8.8.8.8",
+            "10.x.1.60:389": "Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Parameters' -Name 'LDAP Port' -Value 389",
+            "10.x.2.2:80": "sudo a2ensite 000-default.conf && sudo systemctl reload apache2",
+            "10.x.2.10": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=0",
+            "10.x.2.10:22": "sudo rm /tmp/user_database_dump.sql",
+            "10.x.2.4:21": "sudo sed -i 's/^max_clients=.*/max_clients=100/' /etc/vsftpd.conf && sudo systemctl restart vsftpd",
+            "10.x.1.10": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=0",
+            "10.x.1.10:22": "sudo systemctl start ssh",
+            "10.x.1.40": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=0",
+            "10.x.1.40:22": "sudo systemctl start ssh",
+            "10.x.1.30:80": "",
+            "10.x.1.30:3306": "",
+            "10.x.1.70": "Remove-NetFirewallRule -DisplayName 'Delay ICMP Echo Replies'; netsh interface ipv4 set subinterface 'Ethernet' mtu=1500",
+            "10.x.1.70:5985": "Remove-NetFirewallRule -DisplayName 'Block WinRM Port 5985'",
+            "10.x.1.80": "Remove-NetFirewallRule -DisplayName 'Delay ICMP Echo Replies'; netsh interface ipv4 set subinterface 'Ethernet' mtu=1500",
+            "10.x.1.80:5985": "Remove-NetFirewallRule -DisplayName 'Block WinRM Port 5985'"
         },
-        "lv4_fixes":
-        {
-            
+        "lvl4": {
+            "10.x.1.60": "Add-DnsServerResourceRecordA -Name 'MEDIA' -ZoneName 'media.lockdown' -IPv4Address 192.168.1.100",
+            "10.x.1.60:389": "Stop-Service -Name NTDS; Copy-Item -Path 'D:\Backups\ntds.dit' -Destination 'C:\Windows\NTDS\ntds.dit'; Start-Service -Name NTDS",
+            "10.x.2.2:80": "sudo mkdir -p /var/www/html && echo '<h1>It works!</h1>' | sudo tee /var/www/html/index.html",
+            "10.x.2.10": "sudo apt install --reinstall iputils-ping -y",
+            "10.x.2.10:22": "sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql",
+            "10.x.2.4:21": "sudo apt-get install vsftpd -y",
+            "10.x.1.10": "sudo apt-get install iputils-ping -y",
+            "10.x.1.10:22": "sudo apt-get install openssh-server -y",
+            "10.x.1.40": "sudo apt-get install iputils-ping -y",
+            "10.x.1.40:22": "sudo apt-get install openssh-server -y",
+            "10.x.1.30:80": "",
+            "10.x.1.30:3306": "",
+            "10.x.1.70": "netsh int ip reset C:\resetlog.txt; netsh winsock reset",
+            "10.x.1.70:5985": "copy '\\known-good-machine\C$\Windows\System32\winrm.cmd" "C:\Windows\System32\winrm.cmd'",
+            "10.x.1.80": "netsh int ip reset C:\resetlog.txt; netsh winsock reset",
+            "10.x.1.80:5985": "copy '\\known-good-machine\C$\Windows\System32\winrm.cmd" "C:\Windows\System32\winrm.cmd'"
         }
     }
 }

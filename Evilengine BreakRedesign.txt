@@ -1,63 +1,64 @@
 Levels 1-2-3-4
 
 AD Breaks (DNS)
-Stop DNS client service
-Disable DNS service/prevent autostart
-Change DNS server address (0.0.0.0)
-Corrupt DNS zone files/delete records
+- Stop DNS client service
+- Disable DNS service/prevent autostart
+- Change DNS server address (0.0.0.0)
+- Corrupt DNS zone files/delete records
 --------------------------------------
 AD Breaks (LDAP)
-Stop service
-Change user password
-overwrite regkeys
-destroy LDAP Table
+- Stop service
+- Block port via firewall
+- change port
+- destroy LDAP Table
 --------------------------------------
 BackupServer Breaks (HTTP)
-Block HTTP traffic via firewall
-disable server autostart
-modify server config to disable site
-Delete web server directory
+- Block HTTP traffic via firewall
+- disable server autostart
+- modify server config to disable site
+- Delete web server directory
 --------------------------------------
 DevServer Breaks (PING)
-Block inbound ICMP echo request
-Disable outbound ping
-echo ignore All via sysctl
-Remove Ping binary
+- Block inbound ICMP echo request
+- Disable outbound ping
+- echo ignore All via sysctl
+- Remove Ping binary
 --------------------------------------
 DevServer Breaks (SQL)
-Block default port via firewall
-Change binding address of server
-Dump user database
-Corrupt data directory
+- Block default port via firewall
+- Change binding address of server
+- Dump user database
+- Corrupt data directory
 --------------------------------------
 FTPserver Breaks (FTP)
-Disable FTP port via firewall
-Change port configuration
-Set Max Clients to 0 in Config
-Destory FTP service (Hard wipe)
+- Disable FTP port via firewall
+- Change port configuration
+- Set Max Clients to 0 in Config
+- Destory FTP service (Hard wipe)
 --------------------------------------
 Ubuntu Breaks (PING)
-Disable inbound ICMP echo via ufw
-Disable Outgoing pings via iptables
-Kernel modify ICMP settings
-Remove ping binary
+- Disable inbound ICMP echo via ufw
+- Disable Outgoing pings via iptables
+- Kernel modify ICMP settings
+- Remove ping binary
 --------------------------------------
 Ubuntu Breaks (SSH)
-Disable SSH port via ufw
-Swap default port
-stop service
-uninstall service
+- Disable SSH port via ufw
+- Swap default port
+- stop service
+- uninstall service
 --------------------------------------
 GreyLog Breaks (Unknown)
 --------------------------------------
 Windows Breaks (PING)
-Disable ICMP echo replies via firewall
-Block ICMP both ways via firewall
-Corrupt TCP/IP stack settings
+- Disable ICMP echo replies via firewall
+- Block ICMP both ways via firewall
+- Delay ICMP response
+- Corrupt TCP/IP stack settings
 --------------------------------------
 Windows Breaks (WinRM)
-disable local account
-stop service
-Block port via firewall
-RemoveWinRM service binary
+- Block WinRM Access
+- stop service
+- Block port via firewall
+- RemoveWinRM service binary
 --------------------------------------
