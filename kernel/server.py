@@ -14,8 +14,6 @@ def start_server(host='127.0.0.1', port=4444):
         if command.lower() == "exit":
             break
         client_socket.send(command.encode())
-        response = client_socket.recv(4096).decode()
-        print(response)
 
     client_socket.close()
     server.close()
