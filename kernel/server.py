@@ -3,7 +3,7 @@ import socket
 import subprocess
 
 HOST = '0.0.0.0'
-PORT = 1337  # Match this with your kernel module
+PORT = 4444  # Match this with your kernel module
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
