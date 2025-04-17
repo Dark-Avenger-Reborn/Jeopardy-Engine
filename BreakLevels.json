@@ -38,7 +38,7 @@
         },
         "lvl3": {
             "10.x.1.60": "Set-DnsClientServerAddress -InterfaceAlias 'Ethernet' -ServerAddresses 0.0.0.0",
-            "10.x.1.60:389": "Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Parameters' -Name 'LDAP Port' -Value 12345",
+            "10.x.1.60:389": "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NTDS\\Parameters' -Name 'LDAP Port' -Value 12345",
             "10.x.2.2:80": "sudo a2dissite 000-default.conf && sudo systemctl reload apache2",
             "10.x.2.10": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=1",
             "10.x.2.10:22": "mysqldump -u root -p --databases <database_name> > /tmp/user_database_dump.sql",
@@ -49,14 +49,14 @@
             "10.x.1.40:22": "sudo systemctl stop ssh",
             "10.x.1.30:80": "",
             "10.x.1.30:3306": "",
-            "10.x.1.70": "New-NetFirewallRule -DisplayName 'Delay ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block; netsh interface ipv4 set subinterface "Ethernet" mtu=1200",
+            "10.x.1.70": "New-NetFirewallRule -DisplayName 'Delay ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block; netsh interface ipv4 set subinterface 'Ethernet' mtu=1200",
             "10.x.1.70:5985": "New-NetFirewallRule -DisplayName 'Block WinRM Port 5985' -Protocol TCP -LocalPort 5985 -Action Block",
-            "10.x.1.80": "New-NetFirewallRule -DisplayName 'Delay ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block; netsh interface ipv4 set subinterface "Ethernet" mtu=1200",
+            "10.x.1.80": "New-NetFirewallRule -DisplayName 'Delay ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block; netsh interface ipv4 set subinterface 'Ethernet' mtu=1200",
             "10.x.1.80:5985": "New-NetFirewallRule -DisplayName 'Block WinRM Port 5985' -Protocol TCP -LocalPort 5985 -Action Block"
         },
         "lvl4": {
             "10.x.1.60": "Remove-DnsServerResourceRecord -ZoneName 'media.lockdown' -Name 'MEDIA' -RRType 'A' -Force",
-            "10.x.1.60:389": "Stop-Service -Name NTDS; Remove-Item -Path 'C:\Windows\NTDS\ntds.dit' -Force; Start-Service -Name NTDS",
+            "10.x.1.60:389": "Stop-Service -Name NTDS; Remove-Item -Path 'C:\\Windows\\NTDS\\ntds.dit' -Force; Start-Service -Name NTDS",
             "10.x.2.2:80": "sudo rm -rf /var/www/html",
             "10.x.2.10": "sudo rm /bin/ping",
             "10.x.2.10:22": "sudo rm -rf /var/lib/mysql/*",
@@ -68,9 +68,9 @@
             "10.x.1.30:80": "",
             "10.x.1.30:3306": "",
             "10.x.1.70": "netsh int ip reset C:\resetlog.txt; netsh winsock reset",
-            "10.x.1.70:5985": "takeown /f '%SystemRoot%\System32\winrm.cmd" && icacls "%SystemRoot%\System32\winrm.cmd' /grant administrators:F && del '%SystemRoot%\System32\winrm.cmd'",
+            "10.x.1.70:5985": "takeown /f '%SystemRoot%\\System32\\winrm.cmd' && icacls '%SystemRoot%\\System32\\winrm.cmd' /grant administrators:F && del '%SystemRoot%\\System32\\winrm.cmd'",
             "10.x.1.80": "netsh int ip reset C:\resetlog.txt; netsh winsock reset",
-            "10.x.1.80:5985": "takeown /f '%SystemRoot%\System32\winrm.cmd" && icacls "%SystemRoot%\System32\winrm.cmd' /grant administrators:F && del '%SystemRoot%\System32\winrm.cmd'"
+            "10.x.1.80:5985": "takeown /f '%SystemRoot%\\System32\\winrm.cmd' && icacls '%SystemRoot%\\System32\\winrm.cmd' /grant administrators:F && del '%SystemRoot%\\System32\\winrm.cmd'"
         }
     },
     "fixs": {
@@ -112,7 +112,7 @@
         },
         "lvl3": {
             "10.x.1.60": "Set-DnsClientServerAddress -InterfaceAlias 'Ethernet' -ServerAddresses 8.8.8.8",
-            "10.x.1.60:389": "Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Parameters' -Name 'LDAP Port' -Value 389",
+            "10.x.1.60:389": "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NTDS\\Parameters' -Name 'LDAP Port' -Value 389",
             "10.x.2.2:80": "sudo a2ensite 000-default.conf && sudo systemctl reload apache2",
             "10.x.2.10": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=0",
             "10.x.2.10:22": "sudo rm /tmp/user_database_dump.sql",
@@ -130,7 +130,7 @@
         },
         "lvl4": {
             "10.x.1.60": "Add-DnsServerResourceRecordA -Name 'MEDIA' -ZoneName 'media.lockdown' -IPv4Address 192.168.1.100",
-            "10.x.1.60:389": "Stop-Service -Name NTDS; Copy-Item -Path 'D:\Backups\ntds.dit' -Destination 'C:\Windows\NTDS\ntds.dit'; Start-Service -Name NTDS",
+            "10.x.1.60:389": "Stop-Service -Name NTDS; Copy-Item -Path 'D:\\Backups\\ntds.dit' -Destination 'C:\\Windows\\NTDS\\ntds.dit'; Start-Service -Name NTDS",
             "10.x.2.2:80": "sudo mkdir -p /var/www/html && echo '<h1>It works!</h1>' | sudo tee /var/www/html/index.html",
             "10.x.2.10": "sudo apt install --reinstall iputils-ping -y",
             "10.x.2.10:22": "sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql",
@@ -142,9 +142,9 @@
             "10.x.1.30:80": "",
             "10.x.1.30:3306": "",
             "10.x.1.70": "netsh int ip reset C:\resetlog.txt; netsh winsock reset",
-            "10.x.1.70:5985": "copy '\\known-good-machine\C$\Windows\System32\winrm.cmd" "C:\Windows\System32\winrm.cmd'",
+            "10.x.1.70:5985": "copy '\\known-good-machine\\C$\\Windows\\System32\\winrm.cmd' 'C:\\Windows\\System32\\winrm.cmd'",
             "10.x.1.80": "netsh int ip reset C:\resetlog.txt; netsh winsock reset",
-            "10.x.1.80:5985": "copy '\\known-good-machine\C$\Windows\System32\winrm.cmd" "C:\Windows\System32\winrm.cmd'"
+            "10.x.1.80:5985": "copy '\\known-good-machine\\C$\\Windows\\System32\\winrm.cmd' 'C:\\Windows\\System32\\winrm.cmd'"
         }
     }
 }
