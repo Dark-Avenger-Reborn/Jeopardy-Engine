@@ -1,8 +1,0 @@
----
-- name: Break LDAP Port on Windows
-  hosts: AD
-  gather_facts: no
-  tasks:
-    - name: Block LDAP Port
-      win_shell: |
-        netsh advfirewall firewall add rule name="Block LDAP" dir=in action=block protocol=TCP localport=389
