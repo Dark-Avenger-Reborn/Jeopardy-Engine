@@ -14,6 +14,9 @@ document.addEventListener("DOMContentLoaded", function () {
   let terminalOpened = false;
   let pendingAction = null;
 
+  // ✅ Create single socket connection here
+  const socket = io(); // Adjust namespace only if required, e.g., io("/some-namespace")
+
   // Show Terminal
   showTerminalBtn.addEventListener("click", function (e) {
     e.stopPropagation();
@@ -40,7 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
         term.resize(dimensions.cols, dimensions.rows);
       }
 
-      const socket = io("/logs");
+      // ✅ Use the shared socket
       socket.on("log_output", (msg) => {
         term.write(msg.data.replace(/\n/g, "\r\n"));
       });
@@ -103,8 +106,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // Modal Confirmation
   confirmYes.addEventListener("click", function () {
     if (pendingAction) {
-      const controlSocket = io("/control");
-      controlSocket.emit("server_action", { action: pendingAction });
+      // ✅ Use the same socket
+      socket.emit("server_action", { action: pendingAction });
     }
     confirmationModal.classList.add("hidden");
     pendingAction = null;

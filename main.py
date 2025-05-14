@@ -7,19 +7,27 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 import threading
 from io import StringIO
+import logging
 
+# Your existing setup
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 socketio = SocketIO(app, async_mode='eventlet')
 
-# Custom stdout handler for real-time logging
-class LogStream(StringIO):
-    def write(self, msg):
-        super().write(msg)
-        self.flush()
-        socketio.emit('log_output', {'data': msg}, namespace='/logs')
+# Custom log handler
+class SocketIOLogHandler(logging.Handler):
+    def emit(self, record):
+        log_entry = self.format(record)
+        print(log_entry)
+        socketio.emit('log_output', {'data': log_entry})
 
-sys.stdout = LogStream()
+# Attach to werkzeug
+werkzeug_logger = logging.getLogger('werkzeug')
+werkzeug_logger.setLevel(logging.INFO)
+socket_handler = SocketIOLogHandler()
+socket_handler.setLevel(logging.INFO)
+socket_handler.setFormatter(logging.Formatter('%(message)s'))
+werkzeug_logger.addHandler(socket_handler)
 
 # Server management functions
 def execute_command(action):
@@ -35,15 +43,16 @@ def execute_command(action):
         print(f"Error executing {action}: {str(e)}")
 
 # WebSocket handlers
-@socketio.on('server_action', namespace='/control')
+@socketio.on('server_action')
 def handle_server_action(data):
+    print(data)
     action = data['action']
     print(f"Received {action} request")
     execute_command(action)
 
-@socketio.on('connect', namespace='/control')
+@socketio.on('connect')
 def control_connect():
-    emit('log', {'data': 'Connected to control channel'})
+    socketio.emit('log_output', {'data': 'Connected to control channel'})
 
 # Main route
 @app.route('/')
