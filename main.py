@@ -1,201 +1,55 @@
+import eventlet
+eventlet.monkey_patch()
+
+import sys
+import subprocess
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
-import eventlet
-from ansible_automator import handle_list_of_ips
-import json
+import threading
+from io import StringIO
 
-# Create the Flask app and initialize SocketIO with eventlet
 app = Flask(__name__)
-socketio = SocketIO(app, async_mode='eventlet')  # Use eventlet for async_mode
+app.config['SECRET_KEY'] = 'your_secret_key'
+socketio = SocketIO(app, async_mode='eventlet')
 
-def get_credentials():
+# Custom stdout handler for real-time logging
+class LogStream(StringIO):
+    def write(self, msg):
+        super().write(msg)
+        self.flush()
+        socketio.emit('log_output', {'data': msg}, namespace='/logs')
+
+sys.stdout = LogStream()
+
+# Server management functions
+def execute_command(action):
     try:
-        with open("config.json", "r") as file:
-            credentials = json.load(file)
-        return credentials
-    except FileNotFoundError:
-        return None
+        if action == 'reboot':
+            subprocess.run(['sudo', 'shutdown', '-r', 'now'], check=True)
+        elif action == 'shutdown':
+            subprocess.run(['sudo', 'shutdown', '-h', 'now'], check=True)
+        elif action == 'restart_service':
+            # Graceful server restart
+            socketio.stop()
+    except Exception as e:
+        print(f"Error executing {action}: {str(e)}")
 
-teams = [
-    {
-    "name": "Team 01",
-    "ipAddresses": [
-        "10.1.1.60", "10.1.1.60:389","10.1.2.2:80","10.1.2.10",
-        "10.1.2.10:22","10.1.2.4:21","10.1.1.10","10.1.1.10:22",
-        "10.1.1.40","10.1.1.40:22","10.1.1.30:80","10.1.1.30:3306",
-        "10.1.1.70","10.1.1.70:5985","10.1.1.80","10.1.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 02",
-    "ipAddresses": [
-        "10.2.1.60","10.2.1.60:389","10.2.2.2:80","10.2.2.10",
-        "10.2.2.10:22","10.2.2.4:21","10.2.1.10","10.2.1.10:22",
-        "10.2.1.40","10.2.1.40:22","10.2.1.30:80","10.2.1.30:3306",
-        "10.2.1.70","10.2.1.70:5985","10.2.1.80","10.2.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 03",
-    "ipAddresses": [
-        "10.3.1.60","10.3.1.60:389","10.3.2.2:80","10.3.2.10",
-        "10.3.2.10:22","10.3.2.4:21","10.3.1.10","10.3.1.10:22",
-        "10.3.1.40","10.3.1.40:22","10.3.1.30:80","10.3.1.30:3306",
-        "10.3.1.70","10.3.1.70:5985","10.3.1.80","10.3.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 04",
-    "ipAddresses": [
-        "10.4.1.60","10.4.1.60:389","10.4.2.2:80","10.4.2.10",
-        "10.4.2.10:22","10.4.2.4:21","10.4.1.10","10.4.1.10:22",
-        "10.4.1.40","10.4.1.40:22","10.4.1.30:80","10.4.1.30:3306",
-        "10.4.1.70","10.4.1.70:5985","10.4.1.80","10.4.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 05",
-    "ipAddresses": [
-        "10.5.1.60","10.5.1.60:389","10.5.2.2:80","10.5.2.10",
-        "10.5.2.10:22","10.5.2.4:21","10.5.1.10","10.5.1.10:22",
-        "10.5.1.40","10.5.1.40:22","10.5.1.30:80","10.5.1.30:3306",
-        "10.5.1.70","10.5.1.70:5985","10.5.1.80","10.5.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 06",
-    "ipAddresses": [
-        "10.6.1.60","10.6.1.60:389","10.6.2.2:80","10.6.2.10",
-        "10.6.2.10:22","10.6.2.4:21","10.6.1.10","10.6.1.10:22",
-        "10.6.1.40","10.6.1.40:22","10.6.1.30:80","10.6.1.30:3306",
-        "10.6.1.70","10.6.1.70:5985","10.6.1.80","10.6.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 07",
-    "ipAddresses": [
-        "10.7.1.60","10.7.1.60:389","10.7.2.2:80","10.7.2.10",
-        "10.7.2.10:22","10.7.2.4:21","10.7.1.10","10.7.1.10:22",
-        "10.7.1.40","10.7.1.40:22","10.7.1.30:80","10.7.1.30:3306",
-        "10.7.1.70","10.7.1.70:5985","10.7.1.80","10.7.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 08",
-    "ipAddresses": [
-        "10.8.1.60","10.8.1.60:389","10.8.2.2:80","10.8.2.10",
-        "10.8.2.10:22","10.8.2.4:21","10.8.1.10","10.8.1.10:22",
-        "10.8.1.40","10.8.1.40:22","10.8.1.30:80","10.8.1.30:3306",
-        "10.8.1.70","10.8.1.70:5985","10.8.1.80","10.8.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 09",
-    "ipAddresses": [
-        "10.9.1.60","10.9.1.60:389","10.9.2.2:80","10.9.2.10",
-        "10.9.2.10:22","10.9.2.4:21","10.9.1.10","10.9.1.10:22",
-        "10.9.1.40","10.9.1.40:22","10.9.1.30:80","10.9.1.30:3306",
-        "10.9.1.70","10.9.1.70:5985","10.9.1.80","10.9.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 10",
-    "ipAddresses": [
-        "10.10.1.60","10.10.1.60:389","10.10.2.2:80","10.10.2.10",
-        "10.10.2.10:22","10.10.2.4:21","10.10.1.10","10.10.1.10:22",
-        "10.10.1.40","10.10.1.40:22","10.10.1.30:80","10.10.1.30:3306",
-        "10.10.1.70","10.10.1.70:5985","10.10.1.80","10.10.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 11",
-    "ipAddresses": [
-        "10.11.1.60","10.11.1.60:389","10.11.2.2:80","10.11.2.10",
-        "10.11.2.10:22","10.11.2.4:21","10.11.1.10","10.11.1.10:22",
-        "10.11.1.40","10.11.1.40:22","10.11.1.30:80","10.11.1.30:3306",
-        "10.11.1.70","10.11.1.70:5985","10.11.1.80","10.11.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 12",
-    "ipAddresses": [
-        "10.12.1.60","10.12.1.60:389","10.12.2.2:80","10.12.2.10",
-        "10.12.2.10:22","10.12.2.4:21","10.12.1.10","10.12.1.10:22",
-        "10.12.1.40","10.12.1.40:22","10.12.1.30:80","10.12.1.30:3306",
-        "10.12.1.70","10.12.1.70:5985","10.12.1.80","10.12.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 13",
-    "ipAddresses": [
-        "10.13.1.60","10.13.1.60:389","10.13.2.2:80","10.13.2.10",
-        "10.13.2.10:22","10.13.2.4:21","10.13.1.10","10.13.1.10:22",
-        "10.13.1.40","10.13.1.40:22","10.13.1.30:80","10.13.1.30:3306",
-        "10.13.1.70","10.13.1.70:5985","10.13.1.80","10.13.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 14",
-    "ipAddresses": [
-        "10.14.1.60","10.14.1.60:389","10.14.2.2:80","10.14.2.10",
-        "10.14.2.10:22","10.14.2.4:21","10.14.1.10","10.14.1.10:22",
-        "10.14.1.40","10.14.1.40:22","10.14.1.30:80","10.14.1.30:3306",
-        "10.14.1.70","10.14.1.70:5985","10.14.1.80","10.14.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 15",
-    "ipAddresses": [
-        "10.15.1.60","10.15.1.60:389","10.15.2.2:80","10.15.2.10",
-        "10.15.2.10:22","10.15.2.4:21","10.15.1.10","10.15.1.10:22",
-        "10.15.1.40","10.15.1.40:22","10.15.1.30:80","10.15.1.30:3306",
-        "10.15.1.70","10.15.1.70:5985","10.15.1.80","10.15.1.80:5985",
-    ],
-    },
-]
+# WebSocket handlers
+@socketio.on('server_action', namespace='/control')
+def handle_server_action(data):
+    action = data['action']
+    print(f"Received {action} request")
+    execute_command(action)
 
-original_list = []
+@socketio.on('connect', namespace='/control')
+def control_connect():
+    emit('log', {'data': 'Connected to control channel'})
 
-
+# Main route
 @app.route('/')
-def main():
+def index():
     return render_template('index.html')
 
-@socketio.on('update_status')
-def handle_update_status(data):
-
-    affected_ips = []
-    global original_list
-
-    # Determine the type of update and print the affected IPs
-    if data['type'] == 'column':
-        # Update based on column
-        column_index = int(data['index']) - 1
-        for team in teams:
-            ip = team['ipAddresses'][column_index]
-            status = "on" if data['checked'] else "off"
-            affected_ips.append({ip: status})
-    elif data['type'] == 'row':
-        # Update based on row
-        row_index = int(data['index']) - 1
-        for ip in teams[row_index]['ipAddresses']:
-            status = "on" if data['checked'] else "off"
-            affected_ips.append({ip: status})
-    elif data['type'] == 'ip':
-        # Update based on specific IP
-        row_index = int(data['row']) - 1
-        column_index = int(data['column']) - 2
-        ip = teams[row_index]['ipAddresses'][column_index]
-        status = "on" if data['checked'] else "off"
-        affected_ips.append({ip: status})
-
-    if (affected_ips != original_list):
-        original_list = affected_ips
-        handle_list_of_ips(affected_ips)
-
-    # Emit a success message back to the client
-    socketio.emit('update_status_all', data)
-
 if __name__ == '__main__':
-    # Use eventlet's WSGI server to run the app
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', get_credentials()["port"])), app)
+    print("Server starting...")
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)

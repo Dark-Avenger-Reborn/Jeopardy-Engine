@@ -1,155 +1,143 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Evilengine Scoreboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"></script>
+    <title>EnvEngine Scoreboard</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/index.css') }}"
+    />
+    <!-- xterm.js CSS via CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/xterm/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/gh/intuition-dev/mbToolBelt@v2.10.17/src/vendors/xterm/AttachAddon.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/intuition-dev/mbToolBelt@v2.10.17/src/vendors/xterm/FitAddon.js"></script>
   </head>
   <body>
-    <h1>Evilengine Scoreboard</h1>
-    <h2>Default Ports: AD LDAP: 389, Backup HTTP: 80, DevServer SSH: 22, FTP: 21, Ubuntu SSH: 22, WebApp HTTP: 80, WebApp SQL: 3306, WinRM: 5985</h2>
-    <table>
-      <thead>
-        <tr>
-          <th></th>
-          <th>
-            Win AD: <br>DNS
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="1"
+    <header class="header">
+      <span class="version">Version 1.0</span>
+      <div class="icons">
+        <button class="icon-btn" id="show-terminal" title="View live traffic">
+          <!-- Terminal Icon SVG -->
+          <svg width="24" height="24" viewBox="0 0 24 24">
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="16"
+              rx="2"
+              fill="none"
+              stroke="black"
+              stroke-width="2"
             />
-          </th>
-          <th>
-            Win AD: <br>LDAP 
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="2"
+            <polyline
+              points="7,8 11,12 7,16"
+              fill="none"
+              stroke="black"
+              stroke-width="2"
             />
-          </th>
-          <th>
-            Backup: <br>HTTP
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="3"
+            <line
+              x1="13"
+              y1="16"
+              x2="17"
+              y2="16"
+              stroke="black"
+              stroke-width="2"
             />
-          </th>
-          <th>
-            DevServer: <br>PING
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="4"
-            />
-          </th>
-          <th>
-            DevServer: <br>SQL
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="5"
-            />
-          </th>
-          <th>
-            UbuntuFTP: <br>FTP
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="6"
-            />
-          </th>
-          <th>
-            Ubuntu1: <br>PING
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="7"
-            />
-          </th>
-          <th>
-            Ubuntu1: <br>SSH
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="8"
-            />
-          </th>
-          <th>
-            Ubuntu2: <br>PING
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="9"
-            />
-          </th>
-          <th>
-            Ubuntu2: <br>SSH
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="10"
-            />
-          </th>
-          <th>
-            WebApp: <br>HTTP
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="11"
-            />
-          </th>
-          <th>
-            WebApp: <br>SQL
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="12"
-            />
-          </th>
-          <th>
-            Windows1: <br>PING
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="13"
-            />
-          </th>
-          <th>
-            Windows1: <br>WINRM
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="14"
-            />
-          </th>
-          <th>
-            Windows2: <br>PING
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="15"
-            />
-          </th>
-          <th>
-            Windows2: <br>WINRM
-            <input
-              class="styled-checkbox top-checkbox"
-              type="checkbox"
-              data-column="16"
-            />
-          </th>
-        </tr>
-      </thead>
-      <tbody id="team-rows">
-        <!-- Rows will be inserted dynamically here -->
-      </tbody>
-    </table>
+          </svg>
+        </button>
+        <div class="dropdown">
+          <button class="icon-btn" id="gearBtn" title="Server actions">
+            <!-- Gear Icon SVG -->
+            <svg width="24" height="24" viewBox="0 0 24 24">
+              <circle
+                cx="12"
+                cy="12"
+                r="3"
+                stroke="black"
+                stroke-width="2"
+                fill="none"
+              />
+              <path
+                d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                stroke="black"
+                stroke-width="2"
+                fill="none"
+              />
+            </svg>
+          </button>
+          <ul class="dropdown-menu" id="dropdownMenu">
+            <li>
+              <button class="server-action" data-action="restart_service">
+                Reload interface (Restart Services)
+              </button>
+            </li>
+            <li>
+              <button class="server-action" data-action="reboot">
+                Reboot Server
+              </button>
+            </li>
+            <li>
+              <button class="server-action" data-action="shutdown">
+                Shutdown Server
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </header>
 
+    <main>
+      <section class="scoreboard">
+        <h2>EnvEngine Scoreboard</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Teams #’s</th>
+              <th>Service break types</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Team 1</td>
+              <td>Type A</td>
+            </tr>
+            <tr>
+              <td>Team 2</td>
+              <td>Type B</td>
+            </tr>
+            <tr>
+              <td>Team 3</td>
+              <td>Type C</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+      <div class="extra-space">
+        <!-- Any extra space can be left til a later point arrives -->
+      </div>
+
+      <!-- Terminal output area, initially hidden -->
+      <div id="terminal-container" style="display: none">
+        <h3>Server Console Output</h3>
+        <div id="terminal"></div>
+      </div>
+    </main>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="modal hidden">
+      <div class="modal-content">
+        <p id="confirmationText">Are you sure?</p>
+        <div class="modal-buttons">
+          <button id="confirmYes">Yes</button>
+          <button id="confirmNo">No</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Socket.IO and xterm.js via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/xterm/lib/xterm.js"></script>
+    <!-- Your custom JS -->
     <script src="{{ url_for('static', filename='js/index.js') }}"></script>
   </body>
 </html>

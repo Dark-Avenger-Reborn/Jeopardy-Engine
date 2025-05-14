@@ -1,272 +1,117 @@
-const socket = io();
-socket.connect(window.location.origin);
+document.addEventListener("DOMContentLoaded", function () {
+  // Terminal Setup
+  const terminalContainer = document.getElementById("terminal");
+  const terminalBox = document.getElementById("terminal-container");
+  const showTerminalBtn = document.getElementById("show-terminal");
+  const gearBtn = document.getElementById("gearBtn");
+  const dropdownMenu = document.getElementById("dropdownMenu");
+  const confirmationModal = document.getElementById("confirmationModal");
+  const confirmationText = document.getElementById("confirmationText");
+  const confirmYes = document.getElementById("confirmYes");
+  const confirmNo = document.getElementById("confirmNo");
 
-document.addEventListener("DOMContentLoaded", () => {
-const teams = [
-    {
-    name: "Team 01",
-    ipAddresses: [
-        "10.1.1.60", "10.1.1.60:389","10.1.2.2:80","10.1.2.10",
-        "10.1.2.10:22","10.1.2.4:21","10.1.1.10","10.1.1.10:22",
-        "10.1.1.40","10.1.1.40:22","10.1.1.30:80","10.1.1.30:3306",
-        "10.1.1.70","10.1.1.70:5985","10.1.1.80","10.1.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 02",
-    ipAddresses: [
-        "10.2.1.60","10.2.1.60:389","10.2.2.2:80","10.2.2.10",
-        "10.2.2.10:22","10.2.2.4:21","10.2.1.10","10.2.1.10:22",
-        "10.2.1.40","10.2.1.40:22","10.2.1.30:80","10.2.1.30:3306",
-        "10.2.1.70","10.2.1.70:5985","10.2.1.80","10.2.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 03",
-    ipAddresses: [
-        "10.3.1.60","10.3.1.60:389","10.3.2.2:80","10.3.2.10",
-        "10.3.2.10:22","10.3.2.4:21","10.3.1.10","10.3.1.10:22",
-        "10.3.1.40","10.3.1.40:22","10.3.1.30:80","10.3.1.30:3306",
-        "10.3.1.70","10.3.1.70:5985","10.3.1.80","10.3.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 04",
-    ipAddresses: [
-        "10.4.1.60","10.4.1.60:389","10.4.2.2:80","10.4.2.10",
-        "10.4.2.10:22","10.4.2.4:21","10.4.1.10","10.4.1.10:22",
-        "10.4.1.40","10.4.1.40:22","10.4.1.30:80","10.4.1.30:3306",
-        "10.4.1.70","10.4.1.70:5985","10.4.1.80","10.4.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 05",
-    ipAddresses: [
-        "10.5.1.60","10.5.1.60:389","10.5.2.2:80","10.5.2.10",
-        "10.5.2.10:22","10.5.2.4:21","10.5.1.10","10.5.1.10:22",
-        "10.5.1.40","10.5.1.40:22","10.5.1.30:80","10.5.1.30:3306",
-        "10.5.1.70","10.5.1.70:5985","10.5.1.80","10.5.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 06",
-    ipAddresses: [
-        "10.6.1.60","10.6.1.60:389","10.6.2.2:80","10.6.2.10",
-        "10.6.2.10:22","10.6.2.4:21","10.6.1.10","10.6.1.10:22",
-        "10.6.1.40","10.6.1.40:22","10.6.1.30:80","10.6.1.30:3306",
-        "10.6.1.70","10.6.1.70:5985","10.6.1.80","10.6.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 07",
-    ipAddresses: [
-        "10.7.1.60","10.7.1.60:389","10.7.2.2:80","10.7.2.10",
-        "10.7.2.10:22","10.7.2.4:21","10.7.1.10","10.7.1.10:22",
-        "10.7.1.40","10.7.1.40:22","10.7.1.30:80","10.7.1.30:3306",
-        "10.7.1.70","10.7.1.70:5985","10.7.1.80","10.7.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 08",
-    ipAddresses: [
-        "10.8.1.60","10.8.1.60:389","10.8.2.2:80","10.8.2.10",
-        "10.8.2.10:22","10.8.2.4:21","10.8.1.10","10.8.1.10:22",
-        "10.8.1.40","10.8.1.40:22","10.8.1.30:80","10.8.1.30:3306",
-        "10.8.1.70","10.8.1.70:5985","10.8.1.80","10.8.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 09",
-    ipAddresses: [
-        "10.9.1.60","10.9.1.60:389","10.9.2.2:80","10.9.2.10",
-        "10.9.2.10:22","10.9.2.4:21","10.9.1.10","10.9.1.10:22",
-        "10.9.1.40","10.9.1.40:22","10.9.1.30:80","10.9.1.30:3306",
-        "10.9.1.70","10.9.1.70:5985","10.9.1.80","10.9.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 10",
-    ipAddresses: [
-        "10.10.1.60","10.10.1.60:389","10.10.2.2:80","10.10.2.10",
-        "10.10.2.10:22","10.10.2.4:21","10.10.1.10","10.10.1.10:22",
-        "10.10.1.40","10.10.1.40:22","10.10.1.30:80","10.10.1.30:3306",
-        "10.10.1.70","10.10.1.70:5985","10.10.1.80","10.10.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 11",
-    ipAddresses: [
-        "10.11.1.60","10.11.1.60:389","10.11.2.2:80","10.11.2.10",
-        "10.11.2.10:22","10.11.2.4:21","10.11.1.10","10.11.1.10:22",
-        "10.11.1.40","10.11.1.40:22","10.11.1.30:80","10.11.1.30:3306",
-        "10.11.1.70","10.11.1.70:5985","10.11.1.80","10.11.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 12",
-    ipAddresses: [
-        "10.12.1.60","10.12.1.60:389","10.12.2.2:80","10.12.2.10",
-        "10.12.2.10:22","10.12.2.4:21","10.12.1.10","10.12.1.10:22",
-        "10.12.1.40","10.12.1.40:22","10.12.1.30:80","10.12.1.30:3306",
-        "10.12.1.70","10.12.1.70:5985","10.12.1.80","10.12.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 13",
-    ipAddresses: [
-        "10.13.1.60","10.13.1.60:389","10.13.2.2:80","10.13.2.10",
-        "10.13.2.10:22","10.13.2.4:21","10.13.1.10","10.13.1.10:22",
-        "10.13.1.40","10.13.1.40:22","10.13.1.30:80","10.13.1.30:3306",
-        "10.13.1.70","10.13.1.70:5985","10.13.1.80","10.13.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 14",
-    ipAddresses: [
-        "10.14.1.60","10.14.1.60:389","10.14.2.2:80","10.14.2.10",
-        "10.14.2.10:22","10.14.2.4:21","10.14.1.10","10.14.1.10:22",
-        "10.14.1.40","10.14.1.40:22","10.14.1.30:80","10.14.1.30:3306",
-        "10.14.1.70","10.14.1.70:5985","10.14.1.80","10.14.1.80:5985",
-    ],
-    },
-    {
-    name: "Team 15",
-    ipAddresses: [
-        "10.15.1.60","10.15.1.60:389","10.15.2.2:80","10.15.2.10",
-        "10.15.2.10:22","10.15.2.4:21","10.15.1.10","10.15.1.10:22",
-        "10.15.1.40","10.15.1.40:22","10.15.1.30:80","10.15.1.30:3306",
-        "10.15.1.70","10.15.1.70:5985","10.15.1.80","10.15.1.80:5985",
-    ],
-    },
-];
+  let term = null;
+  let terminalOpened = false;
+  let pendingAction = null;
 
-const teamRows = document.getElementById("team-rows");
+  // Show Terminal
+  showTerminalBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    terminalBox.style.display = "block";
 
-// Generate table rows for each team
-teams.forEach((team, index) => {
-    let row = `<tr>
-    <th>Team ${
-    index + 1
-    } <input class="styled-checkbox row-checkbox" type="checkbox" data-row="${
-    index + 1
-    }"></th>`;
+    if (!terminalOpened) {
+      term = new Terminal({
+        cursorBlink: true,
+        fontFamily: "monospace",
+        fontSize: 14,
+        theme: {
+          background: "#1e1e1e",
+          foreground: "#f5f5f5",
+        },
+      });
 
-    team.ipAddresses.forEach((ip) => {
-    row += `<td class="green"><input class="styled-checkbox ip-checkbox" type="checkbox"><span>${ip}</span></td>`;
-    });
+      const fitAddon = new FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(terminalContainer);
+      term.write("Server log will appear here...\r\n");
 
-    row += `</tr>`;
-    teamRows.innerHTML += row;
-});
+      const dimensions = fitAddon.proposeDimensions();
+      if (dimensions?.cols && dimensions?.rows) {
+        term.resize(dimensions.cols, dimensions.rows);
+      }
 
-// Handle column checkboxes
-document
-    .querySelectorAll('thead input[type="checkbox"]')
-    .forEach((checkbox) => {
-    checkbox.addEventListener("change", () => {
-        const columnIndex = checkbox.dataset.column;
-        const isChecked = checkbox.checked;
-        document
-        .querySelectorAll(
-            `tbody td:nth-child(${parseInt(columnIndex) + 1})`
-        )
-        .forEach((cell) => {
-            const ipCheckbox = cell.querySelector(".ip-checkbox");
-            cell.className = isChecked ? "red" : "green";
-            ipCheckbox.checked = isChecked;
-            // Emit update to server
-            socket.emit("update_status", {
-            type: "column",
-            index: columnIndex,
-            checked: isChecked,
-            });
-        });
-    });
-    });
+      const socket = io("/logs");
+      socket.on("log_output", (msg) => {
+        term.write(msg.data.replace(/\n/g, "\r\n"));
+      });
 
-// Handle row checkboxes
-document
-    .querySelectorAll("tbody input.row-checkbox")
-    .forEach((checkbox) => {
-    checkbox.addEventListener("change", () => {
-        const row = checkbox.closest("tr");
-        const isChecked = checkbox.checked;
-        row.querySelectorAll("td").forEach((cell) => {
-        const ipCheckbox = cell.querySelector(".ip-checkbox");
-        cell.className = isChecked ? "red" : "green";
-        ipCheckbox.checked = isChecked;
-        // Emit update to server
-        const rowIndex = checkbox.dataset.row;
-        socket.emit("update_status", {
-            type: "row",
-            index: rowIndex,
-            checked: isChecked,
-        });
-        });
-    });
-    });
-
-// Handle IP checkboxes
-document
-    .querySelectorAll("tbody input.ip-checkbox")
-    .forEach((checkbox) => {
-    checkbox.addEventListener("change", () => {
-        const cell = checkbox.closest("td");
-        const isChecked = checkbox.checked;
-        cell.className = isChecked ? "red" : "green";
-        // Emit update to server
-        const rowIndex = checkbox
-        .closest("tr")
-        .querySelector("input.row-checkbox").dataset.row;
-        const columnIndex =
-        Array.from(cell.parentNode.children).indexOf(cell) + 1;
-        socket.emit("update_status", {
-        type: "ip",
-        row: rowIndex,
-        column: columnIndex,
-        checked: isChecked,
-        });
-    });
-    });
-
-// Listen for updates from the server
-socket.on("update_status_all", (data) => {
-    // Update based on received data
-    if (data.type === "column") {
-    document
-        .querySelectorAll(`thead input[data-column="${data.index}"]`)
-        .forEach((checkbox) => {
-        checkbox.checked = data.checked;
-        });
-    document
-        .querySelectorAll(
-        `tbody td:nth-child(${parseInt(data.index) + 1})`
-        )
-        .forEach((cell) => {
-        const ipCheckbox = cell.querySelector(".ip-checkbox");
-        cell.className = data.checked ? "red" : "green";
-        ipCheckbox.checked = data.checked;
-        });
-    } else if (data.type === "row") {
-    document.querySelector(
-        `tbody input[data-row="${data.index}"]`
-    ).checked = data.checked;
-    const row = document.querySelector(
-        `tbody tr:nth-child(${data.index})`
-    );
-    row.querySelectorAll("td").forEach((cell) => {
-        const ipCheckbox = cell.querySelector(".ip-checkbox");
-        cell.className = data.checked ? "red" : "green";
-        ipCheckbox.checked = data.checked;
-    });
-    } else if (data.type === "ip") {
-    const row = document.querySelector(
-        `tbody tr:nth-child(${data.row})`
-    );
-    const cell = row.querySelector(`td:nth-child(${data.column})`);
-    const ipCheckbox = cell.querySelector(".ip-checkbox");
-    cell.className = data.checked ? "red" : "green";
-    ipCheckbox.checked = data.checked;
+      terminalOpened = true;
     }
-});
+  });
+
+  // Hide Terminal & Dropdown on Outside Click
+  document.addEventListener("mousedown", function (event) {
+    if (
+      terminalBox.style.display === "block" &&
+      !terminalBox.contains(event.target) &&
+      event.target !== showTerminalBtn
+    ) {
+      terminalBox.style.display = "none";
+    }
+
+    if (
+      dropdownMenu.classList.contains("show") &&
+      !dropdownMenu.contains(event.target) &&
+      !gearBtn.contains(event.target)
+    ) {
+      dropdownMenu.classList.remove("show");
+    }
+  });
+
+  // Toggle Dropdown
+  gearBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    dropdownMenu.classList.toggle("show");
+  });
+
+  // Server Action Buttons with Modal
+  document.querySelectorAll(".server-action").forEach((button) => {
+    button.addEventListener("click", function () {
+      const action = button.dataset.action;
+      let message = "";
+
+      switch (action) {
+        case "restart_service":
+          message = "Are you sure you want to restart the interface/service?";
+          break;
+        case "reboot":
+          message = "Are you sure you want to reboot the server?";
+          break;
+        case "shutdown":
+          message = "Are you sure you want to shutdown the server?";
+          break;
+      }
+
+      if (message) {
+        confirmationText.textContent = message;
+        confirmationModal.classList.remove("hidden");
+        pendingAction = action;
+      }
+    });
+  });
+
+  // Modal Confirmation
+  confirmYes.addEventListener("click", function () {
+    if (pendingAction) {
+      const controlSocket = io("/control");
+      controlSocket.emit("server_action", { action: pendingAction });
+    }
+    confirmationModal.classList.add("hidden");
+    pendingAction = null;
+  });
+
+  confirmNo.addEventListener("click", function () {
+    confirmationModal.classList.add("hidden");
+    pendingAction = null;
+  });
 });

@@ -1,8 +1,0 @@
----
-- name: Stop DNS on Windows
-  hosts: AD
-  gather_facts: no
-  tasks:
-    - name: Force stop DNS service using PowerShell
-      win_shell: |
-        Stop-Service -Name dns -Force

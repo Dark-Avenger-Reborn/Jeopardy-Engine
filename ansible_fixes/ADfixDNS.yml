@@ -1,8 +1,0 @@
----
-- name: Start DNS on Windows
-  hosts: AD
-  gather_facts: no
-  tasks:
-    - name: Force start DNS service using PowerShell
-      win_shell: |
-        Start-Service -Name dns
