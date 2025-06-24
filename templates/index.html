@@ -13,6 +13,14 @@
     <script src="https://cdn.jsdelivr.net/gh/intuition-dev/mbToolBelt@v2.10.17/src/vendors/xterm/FitAddon.js"></script>
   </head>
   <body>
+    <div id="errorModal" class="modal hidden">
+      <div class="modal-content">
+        <p id="errorText">An error occurred.</p>
+        <div class="modal-buttons">
+          <button id="errorCloseBtn">Close</button>
+        </div>
+      </div>
+    </div>
     <header class="header">
       <span class="version">Version 1.0.0</span>
       <div class="icons">
@@ -93,23 +101,16 @@
           <thead>
             <tr>
               <th>Teams #’s</th>
-              <th>Service break types</th>
+              <th>Service 1</th>
+              <th>Service 2</th>
+              <th>Service 3</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>Team 1</td>
-              <td>Type A</td>
-            </tr>
-            <tr>
-              <td>Team 2</td>
-              <td>Type B</td>
-            </tr>
-            <tr>
-              <td>Team 3</td>
-              <td>Type C</td>
-            </tr>
-          </tbody>
+            <tbody id="scoreboardBody">
+              <tr><td>Team 1</td></tr>
+              <tr><td>Team 2</td></tr>
+              <tr><td>Team 3</td></tr>
+            </tbody>
         </table>
       </section>
       <div class="extra-space">

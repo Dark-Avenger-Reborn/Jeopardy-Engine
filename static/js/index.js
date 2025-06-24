@@ -9,6 +9,9 @@ document.addEventListener("DOMContentLoaded", function () {
   const confirmationText = document.getElementById("confirmationText");
   const confirmYes = document.getElementById("confirmYes");
   const confirmNo = document.getElementById("confirmNo");
+  const errorModal = document.getElementById("errorModal");
+  const errorText = document.getElementById("errorText");
+  const errorCloseBtn = document.getElementById("errorCloseBtn");
 
   let term = null;
   let terminalOpened = false;
@@ -20,7 +23,13 @@ document.addEventListener("DOMContentLoaded", function () {
   // Show Terminal
   showTerminalBtn.addEventListener("click", function (e) {
     e.stopPropagation();
-    terminalBox.style.display = "block";
+
+    if (terminalBox.style.display === "block") {
+      terminalBox.style.display = "none";
+      return;
+    } else {
+      terminalBox.style.display = "block";
+    }
 
     if (!terminalOpened) {
       term = new Terminal({
@@ -43,7 +52,6 @@ document.addEventListener("DOMContentLoaded", function () {
         term.resize(dimensions.cols, dimensions.rows);
       }
 
-      // ✅ Use the shared socket
       socket.on("log_output", (msg) => {
         term.write(msg.data.replace(/\n/g, "\r\n"));
       });
@@ -57,7 +65,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (
       terminalBox.style.display === "block" &&
       !terminalBox.contains(event.target) &&
-      event.target !== showTerminalBtn
+      !showTerminalBtn.contains(event.target)
     ) {
       terminalBox.style.display = "none";
     }
@@ -117,4 +125,58 @@ document.addEventListener("DOMContentLoaded", function () {
     confirmationModal.classList.add("hidden");
     pendingAction = null;
   });
+
+  function showError(message) {
+    errorText.textContent = message;
+    errorModal.classList.remove("hidden");
+  }
+
+  errorCloseBtn.addEventListener("click", function () {
+    errorModal.classList.add("hidden");
+  });
+
+  socket.on("connect_error", () => {
+    showError("Unable to connect to server. Please check your connection.");
+  });
+
+  socket.on("server_error", (data) => {
+    console.error("Server error:", data);
+    showError(data.message || "An unexpected server error occurred.");
+  });
+
+  const scoreboardData = [
+  { team: "Team 1", services: [true, false, true] },
+  { team: "Team 2", services: [false, true, false] },
+  { team: "Team 3", services: [true, true, true] },
+];
+
+const scoreboardBody = document.getElementById("scoreboardBody");
+
+[...scoreboardBody.rows].forEach((row, rowIndex) => {
+  // Keep only the first cell
+  while (row.cells.length > 1) {
+    row.deleteCell(1);
+  }
+
+  const services = scoreboardData[rowIndex]?.services || [];
+
+  services.forEach((isAvailable, colIndex) => {
+    const td = document.createElement("td");
+    td.textContent = isAvailable ? "✓" : "";
+    td.className = isAvailable ? "checkmark" : "empty";
+    td.style.cursor = "pointer";
+
+    td.addEventListener("click", () => {
+      // Toggle state
+      const current = scoreboardData[rowIndex].services[colIndex];
+      scoreboardData[rowIndex].services[colIndex] = !current;
+
+      // Update cell
+      td.textContent = !current ? "✓" : "";
+      td.className = !current ? "checkmark" : "empty";
+    });
+
+    row.appendChild(td);
+  });
+});
 });
