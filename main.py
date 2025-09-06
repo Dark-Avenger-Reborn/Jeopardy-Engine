@@ -4,7 +4,7 @@ import sys
 import subprocess
 from io import StringIO
 import socketio
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify, request
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -27,9 +27,18 @@ class LogEmitter(StringIO):
 def is_running_under_systemd():
     return os.getenv('INVOCATION_ID') is not None
 
+# Store scoreboard state in memory
+scoreboard_data = [
+    {"team": "Team 1", "services": [True, False, True]},
+    {"team": "Team 2", "services": [False, True, False]},
+    {"team": "Team 3", "services": [True, True, True]},
+]
+
 @sio.event
 def connect(sid, environ):
     print(f"Client connected: {sid}")
+    # Send current scoreboard state to new client
+    sio.emit('scoreboard_update', {'scoreboard': scoreboard_data}, to=sid)
 
 
 @sio.event
@@ -59,6 +68,19 @@ def server_action(sid, data):
                     os.execv(python, [python] + sys.argv)
         except Exception as e:
             print(f"Error executing {action}: {e}")
+
+
+@sio.on('toggle_service')
+def toggle_service(sid, data):
+    team_idx = data.get('team_idx')
+    service_idx = data.get('service_idx')
+    if team_idx is not None and service_idx is not None:
+        try:
+            scoreboard_data[team_idx]['services'][service_idx] = not scoreboard_data[team_idx]['services'][service_idx]
+            # Broadcast updated scoreboard to all clients
+            sio.emit('scoreboard_update', {'scoreboard': scoreboard_data})
+        except Exception as e:
+            print(f"Error toggling service: {e}")
 
 
 @app.route('/')

@@ -144,39 +144,33 @@ document.addEventListener("DOMContentLoaded", function () {
     showError(data.message || "An unexpected server error occurred.");
   });
 
-  const scoreboardData = [
-  { team: "Team 1", services: [true, false, true] },
-  { team: "Team 2", services: [false, true, false] },
-  { team: "Team 3", services: [true, true, true] },
-];
+  let scoreboardData = [];
+  const scoreboardBody = document.getElementById("scoreboardBody");
 
-const scoreboardBody = document.getElementById("scoreboardBody");
-
-[...scoreboardBody.rows].forEach((row, rowIndex) => {
-  // Keep only the first cell
-  while (row.cells.length > 1) {
-    row.deleteCell(1);
+  function renderScoreboard() {
+    [...scoreboardBody.rows].forEach((row, rowIndex) => {
+      // Keep only the first cell
+      while (row.cells.length > 1) {
+        row.deleteCell(1);
+      }
+      const services = scoreboardData[rowIndex]?.services || [];
+      services.forEach((isAvailable, colIndex) => {
+        const td = document.createElement("td");
+        td.textContent = isAvailable ? "✓" : "";
+        td.className = isAvailable ? "checkmark" : "empty";
+        td.style.cursor = "pointer";
+        td.addEventListener("click", () => {
+          // Emit toggle event to server
+          socket.emit("toggle_service", { team_idx: rowIndex, service_idx: colIndex });
+        });
+        row.appendChild(td);
+      });
+    });
   }
 
-  const services = scoreboardData[rowIndex]?.services || [];
-
-  services.forEach((isAvailable, colIndex) => {
-    const td = document.createElement("td");
-    td.textContent = isAvailable ? "✓" : "";
-    td.className = isAvailable ? "checkmark" : "empty";
-    td.style.cursor = "pointer";
-
-    td.addEventListener("click", () => {
-      // Toggle state
-      const current = scoreboardData[rowIndex].services[colIndex];
-      scoreboardData[rowIndex].services[colIndex] = !current;
-
-      // Update cell
-      td.textContent = !current ? "✓" : "";
-      td.className = !current ? "checkmark" : "empty";
-    });
-
-    row.appendChild(td);
+  // Listen for scoreboard updates from server
+  socket.on("scoreboard_update", (msg) => {
+    scoreboardData = msg.scoreboard;
+    renderScoreboard();
   });
-});
 });
