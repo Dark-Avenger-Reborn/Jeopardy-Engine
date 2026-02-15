@@ -145,32 +145,73 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   let scoreboardData = [];
+  let serviceNames = [];
+  const scoreboardHead = document.getElementById("scoreboardHead");
   const scoreboardBody = document.getElementById("scoreboardBody");
 
+  function getServiceNames() {
+    if (serviceNames.length > 0) {
+      return serviceNames;
+    }
+    const firstRow = scoreboardData[0];
+    if (firstRow?.services?.length) {
+      return firstRow.services.map((_, index) => `Service ${index + 1}`);
+    }
+    return [];
+  }
+
   function renderScoreboard() {
-    [...scoreboardBody.rows].forEach((row, rowIndex) => {
-      // Keep only the first cell
-      while (row.cells.length > 1) {
-        row.deleteCell(1);
-      }
-      const services = scoreboardData[rowIndex]?.services || [];
-      services.forEach((isAvailable, colIndex) => {
-        const td = document.createElement("td");
-        td.textContent = isAvailable ? "✓" : "";
-        td.className = isAvailable ? "checkmark" : "empty";
-        td.style.cursor = "pointer";
-        td.addEventListener("click", () => {
-          // Emit toggle event to server
-          socket.emit("toggle_service", { team_idx: rowIndex, service_idx: colIndex });
-        });
-        row.appendChild(td);
+    const headerServices = getServiceNames();
+
+    if (scoreboardHead) {
+      scoreboardHead.innerHTML = "";
+      const headerRow = document.createElement("tr");
+      const teamHeader = document.createElement("th");
+      teamHeader.textContent = "Teams";
+      headerRow.appendChild(teamHeader);
+      headerServices.forEach((serviceName) => {
+        const th = document.createElement("th");
+        th.textContent = serviceName;
+        headerRow.appendChild(th);
       });
-    });
+      scoreboardHead.appendChild(headerRow);
+    }
+
+    if (scoreboardBody) {
+      scoreboardBody.innerHTML = "";
+      scoreboardData.forEach((teamData, rowIndex) => {
+        const row = document.createElement("tr");
+        const teamCell = document.createElement("td");
+        teamCell.textContent = teamData.team || `Team ${rowIndex + 1}`;
+        row.appendChild(teamCell);
+
+        const services = teamData.services || [];
+        services.forEach((isAvailable, colIndex) => {
+          const td = document.createElement("td");
+          td.textContent = isAvailable ? "✓" : "";
+          td.className = isAvailable ? "checkmark" : "empty";
+          td.style.cursor = "pointer";
+          td.addEventListener("click", () => {
+            // Emit toggle event to server
+            socket.emit("toggle_service", {
+              team_idx: rowIndex,
+              service_idx: colIndex,
+            });
+          });
+          row.appendChild(td);
+        });
+
+        scoreboardBody.appendChild(row);
+      });
+    }
   }
 
   // Listen for scoreboard updates from server
   socket.on("scoreboard_update", (msg) => {
-    scoreboardData = msg.scoreboard;
+    scoreboardData = msg.scoreboard || [];
+    if (Array.isArray(msg.service_names)) {
+      serviceNames = msg.service_names;
+    }
     renderScoreboard();
   });
 });

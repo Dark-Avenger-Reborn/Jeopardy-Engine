@@ -12,33 +12,55 @@ sio = socketio.Server(cors_allowed_origins="*", logger=False, max_http_buffer_si
 
 
 class LogEmitter(StringIO):
-    def __init__(self):
+    def __init__(self, stream):
         super().__init__()
+        self._stream = stream
 
     def write(self, text):
         if text.strip():
+            # Write to the original stream to avoid recursion.
+            self._stream.write(text)
+            self._stream.flush()
             sio.start_background_task(sio.emit, 'log_output', {'data': text})
         super().write(text)
 
     def flush(self):
-        pass
+        self._stream.flush()
 
 
 def is_running_under_systemd():
     return os.getenv('INVOCATION_ID') is not None
 
+# Simple configuration: add all teams and services here
+TEAM_NAMES = [
+    "Team 1",
+    "Team 2",
+    "Team 3",
+]
+
+SERVICE_NAMES = [
+    "Service 1",
+    "Service 2",
+    "Service 3",
+]
+
+DEFAULT_SERVICE_STATUS = [False] * len(SERVICE_NAMES)
+
 # Store scoreboard state in memory
 scoreboard_data = [
-    {"team": "Team 1", "services": [True, False, True]},
-    {"team": "Team 2", "services": [False, True, False]},
-    {"team": "Team 3", "services": [True, True, True]},
+    {"team": team_name, "services": DEFAULT_SERVICE_STATUS.copy()}
+    for team_name in TEAM_NAMES
 ]
 
 @sio.event
 def connect(sid, environ):
     print(f"Client connected: {sid}")
     # Send current scoreboard state to new client
-    sio.emit('scoreboard_update', {'scoreboard': scoreboard_data}, to=sid)
+    sio.emit(
+        'scoreboard_update',
+        {'scoreboard': scoreboard_data, 'service_names': SERVICE_NAMES},
+        to=sid,
+    )
 
 
 @sio.event
@@ -76,9 +98,18 @@ def toggle_service(sid, data):
     service_idx = data.get('service_idx')
     if team_idx is not None and service_idx is not None:
         try:
-            scoreboard_data[team_idx]['services'][service_idx] = not scoreboard_data[team_idx]['services'][service_idx]
+            if team_idx < 0 or team_idx >= len(scoreboard_data):
+                return
+            if service_idx < 0 or service_idx >= len(SERVICE_NAMES):
+                return
+            scoreboard_data[team_idx]['services'][service_idx] = (
+                not scoreboard_data[team_idx]['services'][service_idx]
+            )
             # Broadcast updated scoreboard to all clients
-            sio.emit('scoreboard_update', {'scoreboard': scoreboard_data})
+            sio.emit(
+                'scoreboard_update',
+                {'scoreboard': scoreboard_data, 'service_names': SERVICE_NAMES},
+            )
         except Exception as e:
             print(f"Error toggling service: {e}")
 
@@ -89,9 +120,11 @@ def index():
 
 
 if __name__ == '__main__':
-    #log_emitter = LogEmitter()
-    #sys.stdout = log_emitter
-    #sys.stderr = log_emitter
+    original_stdout = sys.__stdout__
+    original_stderr = sys.__stderr__
+
+    sys.stdout = LogEmitter(original_stdout)
+    sys.stderr = LogEmitter(original_stderr)
 
     flaskApp = socketio.Middleware(sio, app)
     eventlet.wsgi.server(eventlet.listen(("0.0.0.0", 5000)), flaskApp)
