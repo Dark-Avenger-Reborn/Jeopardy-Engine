@@ -5,10 +5,12 @@ import subprocess
 from io import StringIO
 import socketio
 from flask import Flask, render_template, jsonify, request
+from trigger_break import break_management
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 sio = socketio.Server(cors_allowed_origins="*", logger=False, max_http_buffer_size=1e8)
+break_manager = break_management()
 
 
 class LogEmitter(StringIO):
@@ -31,20 +33,47 @@ class LogEmitter(StringIO):
 def is_running_under_systemd():
     return os.getenv('INVOCATION_ID') is not None
 
-# Simple configuration: add all teams and services here
+# System and protocol definitions
+SYSTEMS = [
+    {"name": "Ubuntu1", "ip": "10.x.1.10", "os": "Ubuntu 24.02", "protocols": ["ICMP", "SSH"]},
+    {"name": "Ubuntu2", "ip": "10.x.1.40", "os": "Ubuntu 24.02", "protocols": ["ICMP", "SSH"]},
+    {"name": "UbuntuServer", "ip": "10.x.1.90", "os": "Ubuntu 24.02", "protocols": ["HTTP", "MySQL"]},
+    {"name": "WebApp Server", "ip": "TBD", "os": "", "protocols": ["FTP", "ICMP"]},
+    {"name": "Comm Server", "ip": "TBD", "os": "", "protocols": []},
+    {"name": "AD", "ip": "10.x.1.60", "os": "Server 2022", "protocols": ["DNS", "LDAP"]},
+    {"name": "Windows1", "ip": "10.x.1.70", "os": "Windows 10", "protocols": ["WinRM", "ICMP"]},
+    {"name": "Windows2", "ip": "10.x.1.80", "os": "Windows 10", "protocols": ["WinRM", "ICMP"]},
+    {"name": "pfSense", "ip": "10.x.1.1", "os": "pfSense", "protocols": ["Firewall"]},
+]
+
+# Simple configuration: add all teams here
 TEAM_NAMES = [
     "Team 1",
     "Team 2",
     "Team 3",
+    "Team 4",
+    "Team 5",
+    "Team 6",
+    "Team 7",
+    "Team 8",
+    "Team 9",
+    "Team 10",
+    "Team 11",
+    "Team 12",
+    "Team 13",
+    "Team 14",
+    "Team 15",
 ]
 
-SERVICE_NAMES = [
-    "Service 1",
-    "Service 2",
-    "Service 3",
-]
+SERVICE_NAMES = break_manager.get_service_names()
 
-DEFAULT_SERVICE_STATUS = [False] * len(SERVICE_NAMES)
+# Create a flat list of all system:protocol combinations for the service status
+ALL_SERVICES = []
+for system in SYSTEMS:
+    for protocol in system["protocols"]:
+        ALL_SERVICES.append(f"{system['name']}:{protocol}")
+
+DEFAULT_SERVICE_STATUS = [False] * len(ALL_SERVICES)
 
 # Store scoreboard state in memory
 scoreboard_data = [
@@ -58,7 +87,12 @@ def connect(sid, environ):
     # Send current scoreboard state to new client
     sio.emit(
         'scoreboard_update',
-        {'scoreboard': scoreboard_data, 'service_names': SERVICE_NAMES},
+        {
+            'scoreboard': scoreboard_data,
+            'systems': SYSTEMS,
+            'all_services': ALL_SERVICES,
+            'service_names': [f"{s['name']}" for s in SYSTEMS]
+        },
         to=sid,
     )
 
@@ -100,15 +134,20 @@ def toggle_service(sid, data):
         try:
             if team_idx < 0 or team_idx >= len(scoreboard_data):
                 return
-            if service_idx < 0 or service_idx >= len(SERVICE_NAMES):
+            if service_idx < 0 or service_idx >= len(ALL_SERVICES):
                 return
             scoreboard_data[team_idx]['services'][service_idx] = (
                 not scoreboard_data[team_idx]['services'][service_idx]
             )
-            # Broadcast updated scoreboard to all clients
+            break_manager.trigger_break(team_idx, service_idx) if scoreboard_data[team_idx]['services'][service_idx] else break_manager.trigger_unbreak(team_idx, service_idx)
             sio.emit(
                 'scoreboard_update',
-                {'scoreboard': scoreboard_data, 'service_names': SERVICE_NAMES},
+                {
+                    'scoreboard': scoreboard_data,
+                    'systems': SYSTEMS,
+                    'all_services': ALL_SERVICES,
+                    'service_names': [f"{s['name']}" for s in SYSTEMS]
+                },
             )
         except Exception as e:
             print(f"Error toggling service: {e}")

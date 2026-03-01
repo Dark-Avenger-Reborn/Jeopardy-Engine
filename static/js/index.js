@@ -145,62 +145,107 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   let scoreboardData = [];
-  let serviceNames = [];
+  let systems = [];
+  let allServices = [];
   const scoreboardHead = document.getElementById("scoreboardHead");
   const scoreboardBody = document.getElementById("scoreboardBody");
 
-  function getServiceNames() {
-    if (serviceNames.length > 0) {
-      return serviceNames;
-    }
-    const firstRow = scoreboardData[0];
-    if (firstRow?.services?.length) {
-      return firstRow.services.map((_, index) => `Service ${index + 1}`);
-    }
-    return [];
-  }
-
   function renderScoreboard() {
-    const headerServices = getServiceNames();
+    // Build an array of all protocols in order
+    const allProtocols = [];
+    systems.forEach((system) => {
+      if (system.protocols && system.protocols.length > 0) {
+        system.protocols.forEach((protocol) => {
+          allProtocols.push({ system: system.name, protocol: protocol });
+        });
+      }
+    });
+    
+    console.log('Systems count:', systems.length);
+    console.log('All protocols count:', allProtocols.length);
+    console.log('Last protocol:', allProtocols[allProtocols.length - 1]);
 
+    // Render header rows
     if (scoreboardHead) {
       scoreboardHead.innerHTML = "";
-      const headerRow = document.createElement("tr");
-      const teamHeader = document.createElement("th");
-      teamHeader.textContent = "Teams";
-      headerRow.appendChild(teamHeader);
-      headerServices.forEach((serviceName) => {
+      
+      // First header row: System names with colspan
+      const systemHeaderRow = document.createElement("tr");
+      const teamHeaderCell = document.createElement("th");
+      teamHeaderCell.textContent = "";
+      teamHeaderCell.className = "team-header-cell";
+      systemHeaderRow.appendChild(teamHeaderCell);
+      
+      systems.forEach((system) => {
+        // Skip systems with no protocols
+        if (!system.protocols || system.protocols.length === 0) {
+          return;
+        }
         const th = document.createElement("th");
-        th.textContent = serviceName;
-        headerRow.appendChild(th);
+        th.textContent = system.name;
+        th.className = "system-group-header";
+        const protocolCount = system.protocols.length;
+        th.colSpan = protocolCount;
+        systemHeaderRow.appendChild(th);
       });
-      scoreboardHead.appendChild(headerRow);
+      scoreboardHead.appendChild(systemHeaderRow);
+      
+      // Second header row: Protocol names
+      const protocolHeaderRow = document.createElement("tr");
+      const emptyCell = document.createElement("th");
+      emptyCell.className = "team-header-cell";
+      protocolHeaderRow.appendChild(emptyCell);
+      
+      allProtocols.forEach((item) => {
+        const th = document.createElement("th");
+        th.textContent = item.protocol;
+        th.className = "protocol-header";
+        protocolHeaderRow.appendChild(th);
+      });
+      scoreboardHead.appendChild(protocolHeaderRow);
     }
 
+    // Render team rows with checkmarks
     if (scoreboardBody) {
       scoreboardBody.innerHTML = "";
-      scoreboardData.forEach((teamData, rowIndex) => {
+      
+      scoreboardData.forEach((teamData, teamIdx) => {
         const row = document.createElement("tr");
+        
+        // Team name cell
         const teamCell = document.createElement("td");
-        teamCell.textContent = teamData.team || `Team ${rowIndex + 1}`;
+        teamCell.textContent = teamData.team || `Team ${teamIdx + 1}`;
         row.appendChild(teamCell);
-
-        const services = teamData.services || [];
-        services.forEach((isAvailable, colIndex) => {
-          const td = document.createElement("td");
-          td.textContent = isAvailable ? "✓" : "";
-          td.className = isAvailable ? "checkmark" : "empty";
-          td.style.cursor = "pointer";
-          td.addEventListener("click", () => {
-            // Emit toggle event to server
-            socket.emit("toggle_service", {
-              team_idx: rowIndex,
-              service_idx: colIndex,
-            });
+        
+        // Protocol cells with checkmarks
+        allProtocols.forEach((item) => {
+          const cell = document.createElement("td");
+          cell.className = "protocol-cell";
+          
+          const serviceKey = `${item.system}:${item.protocol}`;
+          const serviceIdx = allServices.indexOf(serviceKey);
+          
+          // Check if this service is "broken" for this team
+          if (serviceIdx !== -1 && teamData.services[serviceIdx]) {
+            cell.classList.add("active");
+            cell.textContent = "✓";
+          } else {
+            cell.classList.add("inactive");
+            cell.textContent = "—";
+          }
+          
+          cell.addEventListener("click", () => {
+            if (serviceIdx !== -1) {
+              socket.emit("toggle_service", {
+                team_idx: teamIdx,
+                service_idx: serviceIdx,
+              });
+            }
           });
-          row.appendChild(td);
+          
+          row.appendChild(cell);
         });
-
+        
         scoreboardBody.appendChild(row);
       });
     }
@@ -209,9 +254,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // Listen for scoreboard updates from server
   socket.on("scoreboard_update", (msg) => {
     scoreboardData = msg.scoreboard || [];
-    if (Array.isArray(msg.service_names)) {
-      serviceNames = msg.service_names;
-    }
+    systems = msg.systems || [];
+    allServices = msg.all_services || [];
     renderScoreboard();
   });
 });
