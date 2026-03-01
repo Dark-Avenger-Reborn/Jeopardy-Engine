@@ -1,201 +1,169 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
 import eventlet
-from ansible_automator import handle_list_of_ips
-import json
+import os
+import sys
+import subprocess
+from io import StringIO
+import socketio
+from flask import Flask, render_template, jsonify, request
+from trigger_break import break_management
 
-# Create the Flask app and initialize SocketIO with eventlet
 app = Flask(__name__)
-socketio = SocketIO(app, async_mode='eventlet')  # Use eventlet for async_mode
+app.secret_key = os.urandom(24)
+sio = socketio.Server(cors_allowed_origins="*", logger=False, max_http_buffer_size=1e8)
+break_manager = break_management()
 
-def get_credentials():
-    try:
-        with open("config.json", "r") as file:
-            credentials = json.load(file)
-        return credentials
-    except FileNotFoundError:
-        return None
 
-teams = [
-    {
-    "name": "Team 01",
-    "ipAddresses": [
-        "10.1.1.60", "10.1.1.60:389","10.1.2.2:80","10.1.2.10",
-        "10.1.2.10:22","10.1.2.4:21","10.1.1.10","10.1.1.10:22",
-        "10.1.1.40","10.1.1.40:22","10.1.1.30:80","10.1.1.30:3306",
-        "10.1.1.70","10.1.1.70:5985","10.1.1.80","10.1.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 02",
-    "ipAddresses": [
-        "10.2.1.60","10.2.1.60:389","10.2.2.2:80","10.2.2.10",
-        "10.2.2.10:22","10.2.2.4:21","10.2.1.10","10.2.1.10:22",
-        "10.2.1.40","10.2.1.40:22","10.2.1.30:80","10.2.1.30:3306",
-        "10.2.1.70","10.2.1.70:5985","10.2.1.80","10.2.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 03",
-    "ipAddresses": [
-        "10.3.1.60","10.3.1.60:389","10.3.2.2:80","10.3.2.10",
-        "10.3.2.10:22","10.3.2.4:21","10.3.1.10","10.3.1.10:22",
-        "10.3.1.40","10.3.1.40:22","10.3.1.30:80","10.3.1.30:3306",
-        "10.3.1.70","10.3.1.70:5985","10.3.1.80","10.3.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 04",
-    "ipAddresses": [
-        "10.4.1.60","10.4.1.60:389","10.4.2.2:80","10.4.2.10",
-        "10.4.2.10:22","10.4.2.4:21","10.4.1.10","10.4.1.10:22",
-        "10.4.1.40","10.4.1.40:22","10.4.1.30:80","10.4.1.30:3306",
-        "10.4.1.70","10.4.1.70:5985","10.4.1.80","10.4.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 05",
-    "ipAddresses": [
-        "10.5.1.60","10.5.1.60:389","10.5.2.2:80","10.5.2.10",
-        "10.5.2.10:22","10.5.2.4:21","10.5.1.10","10.5.1.10:22",
-        "10.5.1.40","10.5.1.40:22","10.5.1.30:80","10.5.1.30:3306",
-        "10.5.1.70","10.5.1.70:5985","10.5.1.80","10.5.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 06",
-    "ipAddresses": [
-        "10.6.1.60","10.6.1.60:389","10.6.2.2:80","10.6.2.10",
-        "10.6.2.10:22","10.6.2.4:21","10.6.1.10","10.6.1.10:22",
-        "10.6.1.40","10.6.1.40:22","10.6.1.30:80","10.6.1.30:3306",
-        "10.6.1.70","10.6.1.70:5985","10.6.1.80","10.6.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 07",
-    "ipAddresses": [
-        "10.7.1.60","10.7.1.60:389","10.7.2.2:80","10.7.2.10",
-        "10.7.2.10:22","10.7.2.4:21","10.7.1.10","10.7.1.10:22",
-        "10.7.1.40","10.7.1.40:22","10.7.1.30:80","10.7.1.30:3306",
-        "10.7.1.70","10.7.1.70:5985","10.7.1.80","10.7.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 08",
-    "ipAddresses": [
-        "10.8.1.60","10.8.1.60:389","10.8.2.2:80","10.8.2.10",
-        "10.8.2.10:22","10.8.2.4:21","10.8.1.10","10.8.1.10:22",
-        "10.8.1.40","10.8.1.40:22","10.8.1.30:80","10.8.1.30:3306",
-        "10.8.1.70","10.8.1.70:5985","10.8.1.80","10.8.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 09",
-    "ipAddresses": [
-        "10.9.1.60","10.9.1.60:389","10.9.2.2:80","10.9.2.10",
-        "10.9.2.10:22","10.9.2.4:21","10.9.1.10","10.9.1.10:22",
-        "10.9.1.40","10.9.1.40:22","10.9.1.30:80","10.9.1.30:3306",
-        "10.9.1.70","10.9.1.70:5985","10.9.1.80","10.9.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 10",
-    "ipAddresses": [
-        "10.10.1.60","10.10.1.60:389","10.10.2.2:80","10.10.2.10",
-        "10.10.2.10:22","10.10.2.4:21","10.10.1.10","10.10.1.10:22",
-        "10.10.1.40","10.10.1.40:22","10.10.1.30:80","10.10.1.30:3306",
-        "10.10.1.70","10.10.1.70:5985","10.10.1.80","10.10.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 11",
-    "ipAddresses": [
-        "10.11.1.60","10.11.1.60:389","10.11.2.2:80","10.11.2.10",
-        "10.11.2.10:22","10.11.2.4:21","10.11.1.10","10.11.1.10:22",
-        "10.11.1.40","10.11.1.40:22","10.11.1.30:80","10.11.1.30:3306",
-        "10.11.1.70","10.11.1.70:5985","10.11.1.80","10.11.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 12",
-    "ipAddresses": [
-        "10.12.1.60","10.12.1.60:389","10.12.2.2:80","10.12.2.10",
-        "10.12.2.10:22","10.12.2.4:21","10.12.1.10","10.12.1.10:22",
-        "10.12.1.40","10.12.1.40:22","10.12.1.30:80","10.12.1.30:3306",
-        "10.12.1.70","10.12.1.70:5985","10.12.1.80","10.12.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 13",
-    "ipAddresses": [
-        "10.13.1.60","10.13.1.60:389","10.13.2.2:80","10.13.2.10",
-        "10.13.2.10:22","10.13.2.4:21","10.13.1.10","10.13.1.10:22",
-        "10.13.1.40","10.13.1.40:22","10.13.1.30:80","10.13.1.30:3306",
-        "10.13.1.70","10.13.1.70:5985","10.13.1.80","10.13.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 14",
-    "ipAddresses": [
-        "10.14.1.60","10.14.1.60:389","10.14.2.2:80","10.14.2.10",
-        "10.14.2.10:22","10.14.2.4:21","10.14.1.10","10.14.1.10:22",
-        "10.14.1.40","10.14.1.40:22","10.14.1.30:80","10.14.1.30:3306",
-        "10.14.1.70","10.14.1.70:5985","10.14.1.80","10.14.1.80:5985",
-    ],
-    },
-    {
-    "name": "Team 15",
-    "ipAddresses": [
-        "10.15.1.60","10.15.1.60:389","10.15.2.2:80","10.15.2.10",
-        "10.15.2.10:22","10.15.2.4:21","10.15.1.10","10.15.1.10:22",
-        "10.15.1.40","10.15.1.40:22","10.15.1.30:80","10.15.1.30:3306",
-        "10.15.1.70","10.15.1.70:5985","10.15.1.80","10.15.1.80:5985",
-    ],
-    },
+class LogEmitter(StringIO):
+    def __init__(self, stream):
+        super().__init__()
+        self._stream = stream
+
+    def write(self, text):
+        if text.strip():
+            # Write to the original stream to avoid recursion.
+            self._stream.write(text)
+            self._stream.flush()
+            sio.start_background_task(sio.emit, 'log_output', {'data': text})
+        super().write(text)
+
+    def flush(self):
+        self._stream.flush()
+
+
+def is_running_under_systemd():
+    return os.getenv('INVOCATION_ID') is not None
+
+# System and protocol definitions
+SYSTEMS = [
+    {"name": "Ubuntu1", "ip": "10.x.1.10", "os": "Ubuntu 24.02", "protocols": ["ICMP", "SSH"]},
+    {"name": "Ubuntu2", "ip": "10.x.1.40", "os": "Ubuntu 24.02", "protocols": ["ICMP", "SSH"]},
+    {"name": "UbuntuServer", "ip": "10.x.1.90", "os": "Ubuntu 24.02", "protocols": ["HTTP", "MySQL"]},
+    {"name": "WebApp Server", "ip": "TBD", "os": "", "protocols": ["FTP", "ICMP"]},
+    {"name": "Comm Server", "ip": "TBD", "os": "", "protocols": []},
+    {"name": "AD", "ip": "10.x.1.60", "os": "Server 2022", "protocols": ["DNS", "LDAP"]},
+    {"name": "Windows1", "ip": "10.x.1.70", "os": "Windows 10", "protocols": ["WinRM", "ICMP"]},
+    {"name": "Windows2", "ip": "10.x.1.80", "os": "Windows 10", "protocols": ["WinRM", "ICMP"]},
+    {"name": "pfSense", "ip": "10.x.1.1", "os": "pfSense", "protocols": ["Firewall"]},
 ]
 
-original_list = []
+# Simple configuration: add all teams here
+TEAM_NAMES = [
+    "Team 1",
+    "Team 2",
+    "Team 3",
+    "Team 4",
+    "Team 5",
+    "Team 6",
+    "Team 7",
+    "Team 8",
+    "Team 9",
+    "Team 10",
+    "Team 11",
+    "Team 12",
+    "Team 13",
+    "Team 14",
+    "Team 15",
+]
+
+SERVICE_NAMES = break_manager.get_service_names()
+
+# Create a flat list of all system:protocol combinations for the service status
+ALL_SERVICES = []
+for system in SYSTEMS:
+    for protocol in system["protocols"]:
+        ALL_SERVICES.append(f"{system['name']}:{protocol}")
+
+DEFAULT_SERVICE_STATUS = [False] * len(ALL_SERVICES)
+
+# Store scoreboard state in memory
+scoreboard_data = [
+    {"team": team_name, "services": DEFAULT_SERVICE_STATUS.copy()}
+    for team_name in TEAM_NAMES
+]
+
+@sio.event
+def connect(sid, environ):
+    print(f"Client connected: {sid}")
+    # Send current scoreboard state to new client
+    sio.emit(
+        'scoreboard_update',
+        {
+            'scoreboard': scoreboard_data,
+            'systems': SYSTEMS,
+            'all_services': ALL_SERVICES,
+            'service_names': [f"{s['name']}" for s in SYSTEMS]
+        },
+        to=sid,
+    )
+
+
+@sio.event
+def disconnect(sid):
+    print(f"Client disconnected: {sid}")
+
+
+@sio.on('server_action')
+def server_action(sid, data):
+    sio.emit('server_error', {'message': "testing"})
+    print(f"Received action from {sid}: {data}")
+    action = data.get('action')
+    if action:
+        try:
+            if action == 'reboot':
+                subprocess.run(['sudo', 'reboot', '-r', 'now'], check=True)
+            elif action == 'shutdown':
+                subprocess.run(['sudo', 'shutdown', '-h', 'now'], check=True)
+            elif action == 'restart_service':
+                print("Restarting service...")
+                if is_running_under_systemd():
+                    print("Detected systemd — restarting via systemctl")
+                    subprocess.run(['sudo', 'systemctl', 'restart', 'evilengine.service'], check=True)
+                else:
+                    print("Not running under systemd — restarting Python process")
+                    python = sys.executable
+                    os.execv(python, [python] + sys.argv)
+        except Exception as e:
+            print(f"Error executing {action}: {e}")
+
+
+@sio.on('toggle_service')
+def toggle_service(sid, data):
+    team_idx = data.get('team_idx')
+    service_idx = data.get('service_idx')
+    if team_idx is not None and service_idx is not None:
+        try:
+            if team_idx < 0 or team_idx >= len(scoreboard_data):
+                return
+            if service_idx < 0 or service_idx >= len(ALL_SERVICES):
+                return
+            scoreboard_data[team_idx]['services'][service_idx] = (
+                not scoreboard_data[team_idx]['services'][service_idx]
+            )
+            break_manager.trigger_break(team_idx, service_idx) if scoreboard_data[team_idx]['services'][service_idx] else break_manager.trigger_unbreak(team_idx, service_idx)
+            sio.emit(
+                'scoreboard_update',
+                {
+                    'scoreboard': scoreboard_data,
+                    'systems': SYSTEMS,
+                    'all_services': ALL_SERVICES,
+                    'service_names': [f"{s['name']}" for s in SYSTEMS]
+                },
+            )
+        except Exception as e:
+            print(f"Error toggling service: {e}")
 
 
 @app.route('/')
-def main():
+def index():
     return render_template('index.html')
 
-@socketio.on('update_status')
-def handle_update_status(data):
-
-    affected_ips = []
-    global original_list
-
-    # Determine the type of update and print the affected IPs
-    if data['type'] == 'column':
-        # Update based on column
-        column_index = int(data['index']) - 1
-        for team in teams:
-            ip = team['ipAddresses'][column_index]
-            status = "on" if data['checked'] else "off"
-            affected_ips.append({ip: status})
-    elif data['type'] == 'row':
-        # Update based on row
-        row_index = int(data['index']) - 1
-        for ip in teams[row_index]['ipAddresses']:
-            status = "on" if data['checked'] else "off"
-            affected_ips.append({ip: status})
-    elif data['type'] == 'ip':
-        # Update based on specific IP
-        row_index = int(data['row']) - 1
-        column_index = int(data['column']) - 2
-        ip = teams[row_index]['ipAddresses'][column_index]
-        status = "on" if data['checked'] else "off"
-        affected_ips.append({ip: status})
-
-    if (affected_ips != original_list):
-        original_list = affected_ips
-        handle_list_of_ips(affected_ips)
-
-    # Emit a success message back to the client
-    socketio.emit('update_status_all', data)
 
 if __name__ == '__main__':
-    # Use eventlet's WSGI server to run the app
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', get_credentials()["port"])), app)
+    original_stdout = sys.__stdout__
+    original_stderr = sys.__stderr__
+
+    sys.stdout = LogEmitter(original_stdout)
+    sys.stderr = LogEmitter(original_stderr)
+
+    flaskApp = socketio.Middleware(sio, app)
+    eventlet.wsgi.server(eventlet.listen(("0.0.0.0", 5000)), flaskApp)
