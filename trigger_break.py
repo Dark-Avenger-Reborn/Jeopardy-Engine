@@ -17,10 +17,10 @@ class BreakManager:
             with open(self.config_file, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
-            print(f"Error: {self.config_file} not found")
+            print(f"Error: {self.config_file} not found\n")
             sys.exit(1)
         except json.JSONDecodeError as e:
-            print(f"Error parsing {self.config_file}: {e}")
+            print(f"Error parsing {self.config_file}: {e}\n")
             sys.exit(1)
     
     def xor_encode(self, data, key=0x55):
@@ -53,7 +53,7 @@ class BreakManager:
                 print(f"[+] Response from {ip}:\n{output.decode('utf-8', errors='ignore')}")
                 return True
             except socket.timeout:
-                print(f"[!] No response from {ip} (timeout)")
+                print(f"[!] No response from {ip} (timeout)\n")
                 return True  # Command sent, no response expected
             finally:
                 sock.close()
@@ -78,12 +78,12 @@ class BreakManager:
                 print(f"[+] Response from {ip}:\n{output.decode('utf-8', errors='ignore')}")
                 return True
             except socket.timeout:
-                print(f"[!] No response from {ip} (timeout)")
+                print(f"[!] No response from {ip} (timeout)\n")
                 return True  # Command sent
             finally:
                 sock.close()
         except Exception as e:
-            print(f"[!] Error sending Windows command to {ip}: {e}")
+            print(f"[!] Error sending Windows command to {ip}: {e}\n")
             return False
     
     def trigger_break(self, level, target=None):
@@ -95,11 +95,11 @@ class BreakManager:
                          If None, triggers all breaks for the level
         """
         if 'breaks' not in self.breaks_data:
-            print("[!] No breaks section found in config")
+            print("[!] No breaks section found in config\n")
             return False
         
         if level not in self.breaks_data['breaks']:
-            print(f"[!] Level '{level}' not found. Available levels: {list(self.breaks_data['breaks'].keys())}")
+            print(f"[!] Level '{level}' not found. Available levels: {list(self.breaks_data['breaks'].keys())}\n")
             return False
         
         breaks = self.breaks_data['breaks'][level]
@@ -107,12 +107,12 @@ class BreakManager:
         if target:
             # Trigger single target
             if target not in breaks:
-                print(f"[!] Target '{target}' not found in level '{level}'")
+                print(f"[!] Target '{target}' not found in level '{level}'\n")
                 return False
             
             command = breaks[target]
             if not command:
-                print(f"[!] No command defined for {target}")
+                print(f"[!] No command defined for {target}\n")
                 return False
             
             # Extract IP (remove port if present)
@@ -141,7 +141,7 @@ class BreakManager:
             
             for target, command in breaks.items():
                 if not command:
-                    print(f"[!] Skipping {target} (no command defined)")
+                    print(f"[!] Skipping {target} (no command defined)\n")
                     continue
                 
                 total_count += 1
@@ -172,11 +172,11 @@ class BreakManager:
             target (str): Optional specific target IP or IP:port
         """
         if 'fixs' not in self.breaks_data:
-            print("[!] No fixs section found in config")
+            print("[!] No fixs section found in config\n")
             return False
         
         if level not in self.breaks_data['fixs']:
-            print(f"[!] Level '{level}' not found. Available levels: {list(self.breaks_data['fixs'].keys())}")
+            print(f"[!] Level '{level}' not found. Available levels: {list(self.breaks_data['fixs'].keys())}\n")
             return False
         
         fixes = self.breaks_data['fixs'][level]
@@ -184,12 +184,12 @@ class BreakManager:
         if target:
             # Fix single target
             if target not in fixes:
-                print(f"[!] Target '{target}' not found in level '{level}'")
+                print(f"[!] Target '{target}' not found in level '{level}'\n")
                 return False
             
             command = fixes[target]
             if not command:
-                print(f"[!] No fix command defined for {target}")
+                print(f"[!] No fix command defined for {target}\n")
                 return False
             
             ip = target.split(':')[0]
@@ -205,19 +205,19 @@ class BreakManager:
                 success = self.send_linux_command(ip, command)
             
             if success:
-                self.broken_services.discard(f"{level}:{target}")
-                print(f"[+] Successfully triggered fix for {target}")
+                self.broken_services.discard(f"{level}:{target}\n")
+                print(f"[+] Successfully triggered fix for {target}\n")
             
             return success
         else:
             # Fix all targets in level
-            print(f"[*] Triggering all fixes for level '{level}'")
+            print(f"[*] Triggering all fixes for level '{level}'\n")
             success_count = 0
             total_count = 0
             
             for target, command in fixes.items():
                 if not command:
-                    print(f"[!] Skipping {target} (no fix command defined)")
+                    print(f"[!] Skipping {target} (no fix command defined)\n")
                     continue
                 
                 total_count += 1
@@ -259,6 +259,48 @@ class BreakManager:
                 print(f"  {lvl}: {count} targets ({active} active breaks)")
 
 
+class break_management:
+    """Backward-compatible API used by main.py."""
+
+    def __init__(self, config_file='BreakLevels.json', default_level='lvl1'):
+        self.manager = BreakManager(config_file=config_file)
+        available_levels = list(self.manager.breaks_data.get('breaks', {}).keys())
+        if default_level in available_levels:
+            self.level = default_level
+        elif available_levels:
+            self.level = available_levels[0]
+        else:
+            self.level = None
+
+        level_breaks = self.manager.breaks_data.get('breaks', {}).get(self.level, {}) if self.level else {}
+        self.service_targets = list(level_breaks.keys())
+
+    def get_service_names(self):
+        if not self.level:
+            return []
+        return list(self.manager.breaks_data.get('breaks', {}).get(self.level, {}).keys())
+
+    def trigger_break(self, team_idx, service_idx):
+        if self.level is None:
+            print("[!] No break levels available")
+            return False
+        if service_idx < 0 or service_idx >= len(self.service_targets):
+            print(f"[!] Invalid service index: {service_idx}")
+            return False
+        target = self.service_targets[service_idx]
+        return self.manager.trigger_break(self.level, target)
+
+    def trigger_unbreak(self, team_idx, service_idx):
+        if self.level is None:
+            print("[!] No break levels available")
+            return False
+        if service_idx < 0 or service_idx >= len(self.service_targets):
+            print(f"[!] Invalid service index: {service_idx}")
+            return False
+        target = self.service_targets[service_idx]
+        return self.manager.trigger_fix(self.level, target)
+
+
 def main():
     """Main function for CLI usage"""
     if len(sys.argv) < 3:
@@ -288,7 +330,7 @@ def main():
         target = sys.argv[3] if len(sys.argv) > 3 else None
         manager.trigger_fix(level, target)
     else:
-        print(f"[!] Unknown action: {action}")
+        print(f"[!] Unknown action: {action}\n")
         sys.exit(1)
 
 
