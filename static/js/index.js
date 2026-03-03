@@ -16,6 +16,33 @@ document.addEventListener("DOMContentLoaded", function () {
   let term = null;
   let terminalOpened = false;
   let pendingAction = null;
+  let terminalLogBuffer = "";
+
+  const noisyLogPatterns = [
+    /\"(GET|POST) \/socket\.io\//,
+    /^\(\d+\) accepted \('/,
+  ];
+
+  function shouldHideLogLine(line) {
+    return noisyLogPatterns.some((pattern) => pattern.test(line));
+  }
+
+  function writeTerminalLogChunk(text) {
+    if (!term || typeof text !== "string") {
+      return;
+    }
+
+    terminalLogBuffer += text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const lines = terminalLogBuffer.split("\n");
+    terminalLogBuffer = lines.pop();
+
+    lines.forEach((line) => {
+      if (!line.trim() || shouldHideLogLine(line)) {
+        return;
+      }
+      term.writeln(line);
+    });
+  }
 
   // ✅ Create single socket connection here
   const socket = io(); // Adjust namespace only if required, e.g., io("/some-namespace")
@@ -53,7 +80,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       socket.on("log_output", (msg) => {
-        term.write(msg.data.replace(/\n/g, "\r\n"));
+        writeTerminalLogChunk(msg.data || "");
       });
 
       terminalOpened = true;

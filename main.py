@@ -17,16 +17,33 @@ class LogEmitter(StringIO):
     def __init__(self, stream):
         super().__init__()
         self._stream = stream
+        self._buffer = ""
 
     def write(self, text):
-        if text.strip():
-            # Write to the original stream to avoid recursion.
-            self._stream.write(text)
-            self._stream.flush()
-            sio.start_background_task(sio.emit, 'log_output', {'data': text})
+        if not text:
+            return 0
+
+        # Write to the original stream to avoid recursion.
+        self._stream.write(text)
+        self._stream.flush()
+
+        self._buffer += text
+        lines = self._buffer.splitlines(keepends=True)
+        self._buffer = ""
+
+        for line in lines:
+            if line.endswith("\n") or line.endswith("\r"):
+                sio.start_background_task(sio.emit, 'log_output', {'data': line})
+            else:
+                self._buffer = line
+
         super().write(text)
+        return len(text)
 
     def flush(self):
+        if self._buffer:
+            sio.start_background_task(sio.emit, 'log_output', {'data': self._buffer + "\n"})
+            self._buffer = ""
         self._stream.flush()
 
 
@@ -166,4 +183,4 @@ if __name__ == '__main__':
     sys.stderr = LogEmitter(original_stderr)
 
     flaskApp = socketio.Middleware(sio, app)
-    eventlet.wsgi.server(eventlet.listen(("0.0.0.0", 5000)), flaskApp)
+    eventlet.wsgi.server(eventlet.listen(("0.0.0.0", 5000)), flaskApp, log_output=False)
