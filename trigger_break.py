@@ -1,10 +1,9 @@
 import json
 import socket
 import base64
-import sys
 
 class BreakManager:
-    """Manages network breaks for systems and protocols"""
+    """Manages break/fix dispatch for the web UI backend."""
     
     def __init__(self, config_file='BreakLevels.json'):
         self.config_file = config_file
@@ -17,11 +16,9 @@ class BreakManager:
             with open(self.config_file, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
-            print(f"Error: {self.config_file} not found\n")
-            sys.exit(1)
+            raise RuntimeError(f"Error: {self.config_file} not found")
         except json.JSONDecodeError as e:
-            print(f"Error parsing {self.config_file}: {e}\n")
-            sys.exit(1)
+            raise RuntimeError(f"Error parsing {self.config_file}: {e}")
     
     def xor_encode(self, data, key=0x55):
         """XOR encode data with key (for Linux module)"""
@@ -237,27 +234,8 @@ class BreakManager:
             print(f"\n[+] Completed: {success_count}/{total_count} fixes triggered successfully")
             return success_count > 0
     
-    def list_breaks(self, level=None):
-        """List available breaks"""
-        if level:
-            if level in self.breaks_data['breaks']:
-                print(f"\n[*] Breaks for level '{level}':")
-                for target, command in self.breaks_data['breaks'][level].items():
-                    status = "✓" if f"{level}:{target}" in self.broken_services else " "
-                    cmd_preview = command[:60] + "..." if len(command) > 60 else command
-                    print(f"  [{status}] {target}: {cmd_preview}")
-            else:
-                print(f"[!] Level '{level}' not found")
-        else:
-            print("\n[*] Available break levels:")
-            for lvl in self.breaks_data['breaks'].keys():
-                count = len([t for t in self.breaks_data['breaks'][lvl] if self.breaks_data['breaks'][lvl][t]])
-                active = len([s for s in self.broken_services if s.startswith(f"{lvl}:")])
-                print(f"  {lvl}: {count} targets ({active} active breaks)")
-
-
 class break_management:
-    """Backward-compatible API used by main.py."""
+    """UI-facing API used by main.py."""
 
     def __init__(self, config_file='BreakLevels.json', default_level='lvl1'):
         self.manager = BreakManager(config_file=config_file)
@@ -298,40 +276,3 @@ class break_management:
         target = self.service_targets[service_idx]
         team_number = team_idx + 1
         self.manager.trigger_fix(self.level, target, team_number=team_number)
-
-
-def main():
-    """Main function for CLI usage"""
-    if len(sys.argv) < 3:
-        print("Usage:")
-        print("  python trigger_break.py break <level> [target]")
-        print("  python trigger_break.py fix <level> [target]")
-        print("  python trigger_break.py list [level]")
-        print("\nExamples:")
-        print("  python trigger_break.py break lvl1              # Break all lvl1 targets")
-        print("  python trigger_break.py break lvl2 10.x.1.60    # Break specific target")
-        print("  python trigger_break.py fix lvl1 10.x.2.10:22   # Fix specific target")
-        print("  python trigger_break.py list lvl1               # List all lvl1 breaks")
-        sys.exit(1)
-    
-    manager = BreakManager()
-    action = sys.argv[1].lower()
-    
-    if action == 'list':
-        level = sys.argv[2] if len(sys.argv) > 2 else None
-        manager.list_breaks(level)
-    elif action == 'break':
-        level = sys.argv[2]
-        target = sys.argv[3] if len(sys.argv) > 3 else None
-        manager.trigger_break(level, target)
-    elif action == 'fix':
-        level = sys.argv[2]
-        target = sys.argv[3] if len(sys.argv) > 3 else None
-        manager.trigger_fix(level, target)
-    else:
-        print(f"[!] Unknown action: {action}\n")
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
