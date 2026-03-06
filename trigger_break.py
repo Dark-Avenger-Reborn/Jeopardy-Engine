@@ -36,6 +36,12 @@ class BreakManager:
             'netsh', 'PowerShell', 'Remove-Item'
         ]
         return any(indicator in command for indicator in windows_indicators)
+
+    def apply_team_to_target(self, target, team_number=None):
+        """Replace the `x` octet placeholder in target addresses with team number."""
+        if team_number is None:
+            return target
+        return target.replace('.x.', f'.{team_number}.')
     
     def send_linux_command(self, ip, command):
         """Send command to Linux system via UDP port 5555"""
@@ -86,13 +92,14 @@ class BreakManager:
             print(f"[!] Error sending Windows command to {ip}: {e}\n")
             return False
     
-    def trigger_break(self, level, target=None):
+    def trigger_break(self, level, target=None, team_number=None):
         """
         Trigger a break for specific level and optionally specific target
         Args:
             level (str): Break level (e.g., 'lvl1', 'lvl2', 'lvl3', 'lvl4')
             target (str): Optional specific target IP or IP:port (e.g., '10.x.1.60' or '10.x.2.10:22')
                          If None, triggers all breaks for the level
+            team_number (int): Optional team number used to replace `.x.` placeholders
         """
         if 'breaks' not in self.breaks_data:
             print("[!] No breaks section found in config\n")
@@ -115,8 +122,9 @@ class BreakManager:
                 print(f"[!] No command defined for {target}\n")
                 return False
             
-            # Extract IP (remove port if present)
-            ip = target.split(':')[0]
+            # Extract IP (remove port if present) after team placeholder replacement.
+            resolved_target = self.apply_team_to_target(target, team_number)
+            ip = resolved_target.split(':')[0]
             
             print(f"[*] Triggering break for {target}")
             print(f"[*] Command: {command}")
@@ -130,7 +138,9 @@ class BreakManager:
             
             if success:
                 self.broken_services.add(f"{level}:{target}")
-                print(f"[+] Successfully triggered break for {target}")
+                print(f"[+] Successfully triggered break for {ip}")
+
+            print('\n')
             
             return success
         else:
@@ -145,7 +155,8 @@ class BreakManager:
                     continue
                 
                 total_count += 1
-                ip = target.split(':')[0]
+                resolved_target = self.apply_team_to_target(target, team_number)
+                ip = resolved_target.split(':')[0]
                 
                 print(f"\n[*] Triggering break for {target}")
                 print(f"[*] Command: {command}")
@@ -164,12 +175,13 @@ class BreakManager:
             print(f"\n[+] Completed: {success_count}/{total_count} breaks triggered successfully")
             return success_count > 0
     
-    def trigger_fix(self, level, target=None):
+    def trigger_fix(self, level, target=None, team_number=None):
         """
         Trigger a fix for specific level and optionally specific target
         Args:
             level (str): Break level (e.g., 'lvl1', 'lvl2', 'lvl3', 'lvl4')
             target (str): Optional specific target IP or IP:port
+            team_number (int): Optional team number used to replace `.x.` placeholders
         """
         if 'fixs' not in self.breaks_data:
             print("[!] No fixs section found in config\n")
@@ -192,7 +204,8 @@ class BreakManager:
                 print(f"[!] No fix command defined for {target}\n")
                 return False
             
-            ip = target.split(':')[0]
+            resolved_target = self.apply_team_to_target(target, team_number)
+            ip = resolved_target.split(':')[0]
             
             print(f"[*] Triggering fix for {target}")
             print(f"[*] Command: {command}")
@@ -221,7 +234,8 @@ class BreakManager:
                     continue
                 
                 total_count += 1
-                ip = target.split(':')[0]
+                resolved_target = self.apply_team_to_target(target, team_number)
+                ip = resolved_target.split(':')[0]
                 
                 print(f"\n[*] Triggering fix for {target}")
                 print(f"[*] Command: {command}")
@@ -288,7 +302,8 @@ class break_management:
             print(f"[!] Invalid service index: {service_idx}")
             return False
         target = self.service_targets[service_idx]
-        return self.manager.trigger_break(self.level, target)
+        team_number = team_idx + 1
+        return self.manager.trigger_break(self.level, target, team_number=team_number)
 
     def trigger_unbreak(self, team_idx, service_idx):
         if self.level is None:
@@ -298,7 +313,8 @@ class break_management:
             print(f"[!] Invalid service index: {service_idx}")
             return False
         target = self.service_targets[service_idx]
-        return self.manager.trigger_fix(self.level, target)
+        team_number = team_idx + 1
+        return self.manager.trigger_fix(self.level, target, team_number=team_number)
 
 
 def main():
