@@ -44,7 +44,7 @@ class BreakManager:
         return target.replace('.x.', f'.{team_number}.')
     
     def send_linux_command(self, ip, command):
-        """Send command to Linux system via UDP port 5555"""
+        """Send command to Linux system via UDP port 5555 (fire-and-forget)."""
         try:
             magic_header = b"INTLUPD:"
             encoded_cmd = self.xor_encode(command.encode())
@@ -52,23 +52,14 @@ class BreakManager:
             
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.sendto(payload, (ip, 5555))
-            
-            try:
-                sock.settimeout(5)
-                output, _ = sock.recvfrom(4096)
-                print(f"[+] Response from {ip}:\n{output.decode('utf-8', errors='ignore')}")
-                return True
-            except socket.timeout:
-                print(f"[!] No response from {ip} (timeout)\n")
-                return True  # Command sent, no response expected
-            finally:
-                sock.close()
+            sock.close()
+            return True
         except Exception as e:
             print(f"[!] Error sending Linux command to {ip}: {e}")
             return False
     
     def send_windows_command(self, ip, command):
-        """Send command to Windows system via TCP port 443"""
+        """Send command to Windows system via TCP port 443 (fire-and-forget)."""
         try:
             magic_header = "INTLUPD:"
             encoded_cmd = base64.b64encode(command.encode()).decode()
@@ -78,16 +69,8 @@ class BreakManager:
             sock.settimeout(10)
             sock.connect((ip, 443))
             sock.send(payload.encode())
-            
-            try:
-                output = sock.recv(4096)
-                print(f"[+] Response from {ip}:\n{output.decode('utf-8', errors='ignore')}")
-                return True
-            except socket.timeout:
-                print(f"[!] No response from {ip} (timeout)\n")
-                return True  # Command sent
-            finally:
-                sock.close()
+            sock.close()
+            return True
         except Exception as e:
             print(f"[!] Error sending Windows command to {ip}: {e}\n")
             return False
@@ -300,10 +283,10 @@ class break_management:
             return False
         if service_idx < 0 or service_idx >= len(self.service_targets):
             print(f"[!] Invalid service index: {service_idx}")
-            return False
+            return
         target = self.service_targets[service_idx]
         team_number = team_idx + 1
-        return self.manager.trigger_break(self.level, target, team_number=team_number)
+        self.manager.trigger_break(self.level, target, team_number=team_number)
 
     def trigger_unbreak(self, team_idx, service_idx):
         if self.level is None:
@@ -311,10 +294,10 @@ class break_management:
             return False
         if service_idx < 0 or service_idx >= len(self.service_targets):
             print(f"[!] Invalid service index: {service_idx}")
-            return False
+            return
         target = self.service_targets[service_idx]
         team_number = team_idx + 1
-        return self.manager.trigger_fix(self.level, target, team_number=team_number)
+        self.manager.trigger_fix(self.level, target, team_number=team_number)
 
 
 def main():

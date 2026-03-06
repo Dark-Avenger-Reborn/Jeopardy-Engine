@@ -156,7 +156,6 @@ def toggle_service(sid, data):
             scoreboard_data[team_idx]['services'][service_idx] = (
                 not scoreboard_data[team_idx]['services'][service_idx]
             )
-            break_manager.trigger_break(team_idx, service_idx) if scoreboard_data[team_idx]['services'][service_idx] else break_manager.trigger_unbreak(team_idx, service_idx)
             sio.emit(
                 'scoreboard_update',
                 {
@@ -166,8 +165,27 @@ def toggle_service(sid, data):
                     'service_names': [f"{s['name']}" for s in SYSTEMS]
                 },
             )
+
+            desired_state = scoreboard_data[team_idx]['services'][service_idx]
+            sio.start_background_task(
+                _dispatch_service_action,
+                team_idx,
+                service_idx,
+                desired_state,
+            )
         except Exception as e:
             print(f"Error toggling service: {e}")
+
+
+def _dispatch_service_action(team_idx, service_idx, desired_state):
+    """Dispatch break/fix in background without blocking UI updates."""
+    try:
+        if desired_state:
+            break_manager.trigger_break(team_idx, service_idx)
+        else:
+            break_manager.trigger_unbreak(team_idx, service_idx)
+    except Exception as e:
+        print(f"Error dispatching service action: {e}")
 
 
 @app.route('/')
