@@ -35,10 +35,17 @@ class BreakManager:
         return any(indicator in command for indicator in windows_indicators)
 
     def apply_team_to_target(self, target, team_number=None):
-        """Replace the `x` octet placeholder in target addresses with team number."""
+        """Replace any `x` host octet placeholder in target addresses with team number."""
         if team_number is None:
             return target
-        return target.replace('.x.', f'.{team_number}.')
+
+        host, sep, port = target.partition(':')
+        octets = host.split('.')
+        resolved_host = '.'.join(
+            str(team_number) if octet.lower() == 'x' else octet
+            for octet in octets
+        )
+        return f"{resolved_host}{sep}{port}" if sep else resolved_host
     
     def send_linux_command(self, ip, command):
         """Send command to Linux system via UDP port 5555 (fire-and-forget)."""
@@ -106,7 +113,7 @@ class BreakManager:
             resolved_target = self.apply_team_to_target(target, team_number)
             ip = resolved_target.split(':')[0]
             
-            print(f"[*] Triggering break for {target}")
+            print(f"[*] Triggering break for {resolved_target}")
             print(f"[*] Command: {command}")
             
             if self.is_windows_command(command):
@@ -118,7 +125,7 @@ class BreakManager:
             
             if success:
                 self.broken_services.add(f"{level}:{target}")
-                print(f"[+] Successfully triggered break for {ip}")
+                print(f"[+] Successfully triggered break for {resolved_target}")
 
             print('\n')
             
@@ -138,7 +145,7 @@ class BreakManager:
                 resolved_target = self.apply_team_to_target(target, team_number)
                 ip = resolved_target.split(':')[0]
                 
-                print(f"\n[*] Triggering break for {target}")
+                print(f"\n[*] Triggering break for {resolved_target}")
                 print(f"[*] Command: {command}")
                 
                 if self.is_windows_command(command):
@@ -187,7 +194,7 @@ class BreakManager:
             resolved_target = self.apply_team_to_target(target, team_number)
             ip = resolved_target.split(':')[0]
             
-            print(f"[*] Triggering fix for {target}")
+            print(f"[*] Triggering fix for {resolved_target}")
             print(f"[*] Command: {command}")
             
             if self.is_windows_command(command):
@@ -198,8 +205,8 @@ class BreakManager:
                 success = self.send_linux_command(ip, command)
             
             if success:
-                self.broken_services.discard(f"{level}:{target}\n")
-                print(f"[+] Successfully triggered fix for {target}\n")
+                self.broken_services.discard(f"{level}:{target}")
+                print(f"[+] Successfully triggered fix for {resolved_target}\n")
             
             return success
         else:
@@ -217,7 +224,7 @@ class BreakManager:
                 resolved_target = self.apply_team_to_target(target, team_number)
                 ip = resolved_target.split(':')[0]
                 
-                print(f"\n[*] Triggering fix for {target}")
+                print(f"\n[*] Triggering fix for {resolved_target}")
                 print(f"[*] Command: {command}")
                 
                 if self.is_windows_command(command):
