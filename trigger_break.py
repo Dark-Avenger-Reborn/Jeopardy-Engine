@@ -237,7 +237,7 @@ class BreakManager:
 class break_management:
     """UI-facing API used by main.py."""
 
-    def __init__(self, config_file='BreakLevels.json', default_level='lvl1', service_keys=None, service_target_map=None):
+    def __init__(self, config_file='BreakLevels.json', default_level='lvl3', service_keys=None, service_target_map=None):
         self.manager = BreakManager(config_file=config_file)
         available_levels = list(self.manager.breaks_data.get('breaks', {}).keys())
         if default_level in available_levels:

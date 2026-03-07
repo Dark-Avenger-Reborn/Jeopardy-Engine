@@ -18,6 +18,25 @@
             "10.x.1.80": "New-NetFirewallRule -DisplayName 'Block ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block",
             "10.x.1.80:5985": "New-NetFirewallRule -DisplayName 'Block Remote WinRM Access' -Protocol TCP -LocalPort 5985 -Action Block",
             "10.x.1.1": "sudo pfctl -d"
+        },
+        "lvl3": {
+            "10.x.1.60": "Set-DnsClientServerAddress -InterfaceAlias 'Ethernet' -ServerAddresses '0.0.0.0'",
+            "10.x.1.60:389": "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NTDS\\Parameters' -Name 'TCP/IP Port' -Value 1389",
+            "10.x.2.2:80": "sudo sed -i 's/listen 80 default_server;/listen 8080 default_server;/' /etc/nginx/sites-available/default && sudo systemctl reload nginx",
+            "10.x.2.10": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=1",
+            "10.x.2.10:22": "sudo bash -c \"mysqldump --databases users > /tmp/users_lvl3.sql 2>/dev/null; mysql -e 'DROP DATABASE IF EXISTS users;'\"",
+            "10.x.2.4:21": "sudo bash -c \"grep -q '^max_clients=' /etc/vsftpd.conf && sed -i 's/^max_clients=.*/max_clients=0/' /etc/vsftpd.conf || echo 'max_clients=0' >> /etc/vsftpd.conf\" && sudo systemctl restart vsftpd",
+            "10.x.1.10": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=1",
+            "10.x.1.10:22": "sudo systemctl stop ssh",
+            "10.x.1.40": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=1",
+            "10.x.1.40:22": "sudo systemctl stop ssh",
+            "10.x.1.30:80": "",
+            "10.x.1.30:3306": "",
+            "10.x.1.70": "netsh advfirewall firewall add rule name='Delay ICMP Response L3' dir=in action=block protocol=icmpv4:8,any",
+            "10.x.1.70:5985": "New-NetFirewallRule -DisplayName 'Block WinRM 5985 L3' -Direction Inbound -Protocol TCP -LocalPort 5985 -Action Block",
+            "10.x.1.80": "netsh advfirewall firewall add rule name='Delay ICMP Response L3' dir=in action=block protocol=icmpv4:8,any",
+            "10.x.1.80:5985": "New-NetFirewallRule -DisplayName 'Block WinRM 5985 L3' -Direction Inbound -Protocol TCP -LocalPort 5985 -Action Block",
+            "10.x.1.1": "sudo pfctl -d"
         }
     },
     "fixs": {
@@ -38,6 +57,25 @@
             "10.x.1.70:5985": "Remove-NetFirewallRule -DisplayName 'Block Remote WinRM Access'",
             "10.x.1.80": "Remove-NetFirewallRule -DisplayName 'Block ICMP Echo Replies'",
             "10.x.1.80:5985": "Remove-NetFirewallRule -DisplayName 'Block Remote WinRM Access'",
+            "10.x.1.1": "sudo pfctl -e"
+        },
+        "lvl3": {
+            "10.x.1.60": "Set-DnsClientServerAddress -InterfaceAlias 'Ethernet' -ResetServerAddresses",
+            "10.x.1.60:389": "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NTDS\\Parameters' -Name 'TCP/IP Port' -Value 389",
+            "10.x.2.2:80": "sudo sed -i 's/listen 8080 default_server;/listen 80 default_server;/' /etc/nginx/sites-available/default && sudo systemctl reload nginx",
+            "10.x.2.10": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=0",
+            "10.x.2.10:22": "sudo bash -c \"if [ -f /tmp/users_lvl3.sql ]; then mysql < /tmp/users_lvl3.sql; fi\"",
+            "10.x.2.4:21": "sudo bash -c \"grep -q '^max_clients=' /etc/vsftpd.conf && sed -i 's/^max_clients=.*/max_clients=50/' /etc/vsftpd.conf || echo 'max_clients=50' >> /etc/vsftpd.conf\" && sudo systemctl restart vsftpd",
+            "10.x.1.10": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=0",
+            "10.x.1.10:22": "sudo systemctl start ssh",
+            "10.x.1.40": "sudo sysctl -w net.ipv4.icmp_echo_ignore_all=0",
+            "10.x.1.40:22": "sudo systemctl start ssh",
+            "10.x.1.30:80": "",
+            "10.x.1.30:3306": "",
+            "10.x.1.70": "netsh advfirewall firewall delete rule name='Delay ICMP Response L3'",
+            "10.x.1.70:5985": "Remove-NetFirewallRule -DisplayName 'Block WinRM 5985 L3'",
+            "10.x.1.80": "netsh advfirewall firewall delete rule name='Delay ICMP Response L3'",
+            "10.x.1.80:5985": "Remove-NetFirewallRule -DisplayName 'Block WinRM 5985 L3'",
             "10.x.1.1": "sudo pfctl -e"
         }
     }
