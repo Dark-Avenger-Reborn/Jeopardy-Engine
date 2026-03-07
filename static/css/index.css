@@ -234,7 +234,7 @@ main {
   color: #ddd;
 }
 .extra-space {
-  min-height: 60px;
+  min-height: 20px;
   /* Placeholder for future content */
 }
 

@@ -54,8 +54,7 @@ def is_running_under_systemd():
 SYSTEMS = [
     {"name": "Ubuntu1", "ip": "10.x.1.10", "os": "Ubuntu 24.02", "protocols": ["ICMP", "SSH"]},
     {"name": "Ubuntu2", "ip": "10.x.1.40", "os": "Ubuntu 24.02", "protocols": ["ICMP", "SSH"]},
-    {"name": "UbuntuServer", "ip": "10.x.1.90", "os": "Ubuntu 24.02", "protocols": ["HTTP", "MySQL"]},
-    {"name": "WebApp Server", "ip": "TBD", "os": "", "protocols": ["FTP", "ICMP"]},
+    {"name": "UbuntuServer", "ip": "10.x.1.90", "os": "Ubuntu 24.02", "protocols": ["HTTP", "FTP", "PING", "MySQL"]},
     {"name": "Comm Server", "ip": "TBD", "os": "", "protocols": []},
     {"name": "AD", "ip": "10.x.1.60", "os": "Server 2022", "protocols": ["DNS", "LDAP"]},
     {"name": "Windows1", "ip": "10.x.1.70", "os": "Windows 10", "protocols": ["WinRM", "ICMP"]},
