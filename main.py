@@ -10,7 +10,6 @@ from trigger_break import break_management
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 sio = socketio.Server(cors_allowed_origins="*", logger=False, max_http_buffer_size=1e8)
-break_manager = break_management()
 
 
 class LogEmitter(StringIO):
@@ -54,7 +53,7 @@ def is_running_under_systemd():
 SYSTEMS = [
     {"name": "Ubuntu1", "ip": "10.x.1.10", "os": "Ubuntu 24.02", "protocols": ["ICMP", "SSH"]},
     {"name": "Ubuntu2", "ip": "10.x.1.40", "os": "Ubuntu 24.02", "protocols": ["ICMP", "SSH"]},
-    {"name": "UbuntuServer", "ip": "10.x.1.90", "os": "Ubuntu 24.02", "protocols": ["HTTP", "FTP", "PING", "MySQL"]},
+    {"name": "UbuntuServer", "ip": "10.x.1.90", "os": "Ubuntu 24.02", "protocols": ["HTTP", "FTP", "ICMP", "MySQL"]},
     {"name": "Comm Server", "ip": "TBD", "os": "", "protocols": []},
     {"name": "AD", "ip": "10.x.1.60", "os": "Server 2022", "protocols": ["DNS", "LDAP"]},
     {"name": "Windows1", "ip": "10.x.1.70", "os": "Windows 10", "protocols": ["WinRM", "ICMP"]},
@@ -81,13 +80,32 @@ TEAM_NAMES = [
     "Team 15",
 ]
 
-SERVICE_NAMES = break_manager.get_service_names()
-
 # Create a flat list of all system:protocol combinations for the service status
 ALL_SERVICES = []
 for system in SYSTEMS:
     for protocol in system["protocols"]:
         ALL_SERVICES.append(f"{system['name']}:{protocol}")
+
+# Explicit service routing avoids relying on BreakLevels JSON key order.
+SERVICE_TARGET_MAP = {
+    "Ubuntu1:ICMP": "10.x.1.10",
+    "Ubuntu1:SSH": "10.x.1.10:22",
+    "Ubuntu2:ICMP": "10.x.1.40",
+    "Ubuntu2:SSH": "10.x.1.40:22",
+    "UbuntuServer:HTTP": "10.x.2.2:80",
+    "UbuntuServer:FTP": "10.x.2.4:21",
+    "UbuntuServer:ICMP": "10.x.2.10",
+    "UbuntuServer:MySQL": "10.x.2.10:22",
+    "AD:DNS": "10.x.1.60",
+    "AD:LDAP": "10.x.1.60:389",
+    "Windows1:WinRM": "10.x.1.70:5985",
+    "Windows1:ICMP": "10.x.1.70",
+    "Windows2:WinRM": "10.x.1.80:5985",
+    "Windows2:ICMP": "10.x.1.80",
+    "pfSense:Firewall": "10.x.1.1",
+}
+
+break_manager = break_management(service_keys=ALL_SERVICES, service_target_map=SERVICE_TARGET_MAP)
 
 DEFAULT_SERVICE_STATUS = [False] * len(ALL_SERVICES)
 

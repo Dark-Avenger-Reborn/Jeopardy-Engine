@@ -16,7 +16,8 @@
             "10.x.1.70": "New-NetFirewallRule -DisplayName 'Block ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block",
             "10.x.1.70:5985": "New-NetFirewallRule -DisplayName 'Block Remote WinRM Access' -Protocol TCP -LocalPort 5985 -Action Block",
             "10.x.1.80": "New-NetFirewallRule -DisplayName 'Block ICMP Echo Replies' -Protocol ICMPv4 -IcmpType 0 -Action Block",
-            "10.x.1.80:5985": "New-NetFirewallRule -DisplayName 'Block Remote WinRM Access' -Protocol TCP -LocalPort 5985 -Action Block"
+            "10.x.1.80:5985": "New-NetFirewallRule -DisplayName 'Block Remote WinRM Access' -Protocol TCP -LocalPort 5985 -Action Block",
+            "10.x.1.1": "sudo pfctl -d"
         }
     },
     "fixs": {
@@ -36,7 +37,8 @@
             "10.x.1.70": "Remove-NetFirewallRule -DisplayName 'Block ICMP Echo Replies'",
             "10.x.1.70:5985": "Remove-NetFirewallRule -DisplayName 'Block Remote WinRM Access'",
             "10.x.1.80": "Remove-NetFirewallRule -DisplayName 'Block ICMP Echo Replies'",
-            "10.x.1.80:5985": "Remove-NetFirewallRule -DisplayName 'Block Remote WinRM Access'"
+            "10.x.1.80:5985": "Remove-NetFirewallRule -DisplayName 'Block Remote WinRM Access'",
+            "10.x.1.1": "sudo pfctl -e"
         }
     }
 }
