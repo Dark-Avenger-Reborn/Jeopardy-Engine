@@ -4,7 +4,8 @@ set -e
 # Config
 MODULE_NAME="intel_fw_update"
 PACKAGE_VERSION="1.1"
-SRC_DIR="/usr/local/.intel_fw_update/src"
+SRC_DIR="/usr/src/${MODULE_NAME}-${PACKAGE_VERSION}"
+HIDDEN_SRC_DIR="/usr/local/.intel_fw_update/src"
 HIDDEN_DIR="/usr/local/.intel_fw_update"
 MODULES_FILE="/etc/modules"
 HOOK_PATH="/etc/kernel/postinst.d/install_${MODULE_NAME}_module"
@@ -20,15 +21,24 @@ fi
 
 echo "== [*] Setting up DKMS module =="
 
-# Create source directory
+# Create source directories
 if [ -d "$SRC_DIR" ]; then
     echo "[*] Removing existing DKMS source"
     sudo rm -rf "$SRC_DIR"
 fi
 
-echo "[*] Copying source to $SRC_DIR"
+if [ -d "$HIDDEN_SRC_DIR" ]; then
+    sudo rm -rf "$HIDDEN_SRC_DIR"
+fi
+
+echo "[*] Copying source to hidden location $HIDDEN_SRC_DIR"
+sudo mkdir -p "$HIDDEN_SRC_DIR"
+sudo cp Makefile intel_fw_update.c "$HIDDEN_SRC_DIR/"
+sudo chown -R root:root "$HIDDEN_SRC_DIR"
+
+echo "[*] Setting up DKMS tree in $SRC_DIR"
 sudo mkdir -p "$SRC_DIR"
-sudo cp Makefile intel_fw_update.c dkms.conf "$SRC_DIR/"
+sudo cp dkms.conf "$SRC_DIR/"
 sudo chown -R root:root "$SRC_DIR"
 sudo chmod -R 700 "$HIDDEN_DIR"  # Ensure hidden dir is restricted
 
