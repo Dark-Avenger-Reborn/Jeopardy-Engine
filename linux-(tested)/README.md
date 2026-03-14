@@ -27,19 +27,19 @@ This is a Linux kernel module-based command and control shell that:
 **Ubuntu/Debian:**
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential linux-headers-$(uname -r) dkms wget
+sudo apt-get install build-essential linux-headers-$(uname -r) dkms wget make
 ```
 
 **CentOS/RHEL:**
 ```bash
 sudo yum groupinstall "Development Tools"
-sudo yum install kernel-devel-$(uname -r) dkms
+sudo yum install kernel-devel-$(uname -r) dkms make
 ```
 
 **Fedora:**
 ```bash
 sudo dnf groupinstall "Development Tools"
-sudo dnf install kernel-devel-$(uname -r) dkms
+sudo dnf install kernel-devel-$(uname -r) dkms make
 ```
 
 ---

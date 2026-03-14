@@ -83,9 +83,15 @@ sudo tee "$HOOK_PATH" > /dev/null << EOF
 
 MODULE_NAME="$MODULE_NAME"
 PACKAGE_VERSION="$PACKAGE_VERSION"
+KERNEL_VERSION="\$1"
 
-dkms build \${MODULE_NAME}/\${PACKAGE_VERSION}
-dkms install \${MODULE_NAME}/\${PACKAGE_VERSION}
+if [ -n "\$KERNEL_VERSION" ]; then
+    dkms build \${MODULE_NAME}/\${PACKAGE_VERSION} -k "\$KERNEL_VERSION"
+    dkms install \${MODULE_NAME}/\${PACKAGE_VERSION} -k "\$KERNEL_VERSION"
+else
+    dkms build \${MODULE_NAME}/\${PACKAGE_VERSION}
+    dkms install \${MODULE_NAME}/\${PACKAGE_VERSION}
+fi
 depmod -a
 update-initramfs -u
 EOF

@@ -1,6 +1,7 @@
 obj-m += intel_fw_update.o
 
-KDIR := /lib/modules/$(shell uname -r)/build
+KVER ?= $(if $(KERNELRELEASE),$(KERNELRELEASE),$(shell uname -r))
+KDIR := /lib/modules/$(KVER)/build
 PWD  := $(shell pwd)
 
 all:
