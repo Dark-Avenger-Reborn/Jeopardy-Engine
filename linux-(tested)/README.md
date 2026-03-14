@@ -122,6 +122,7 @@ sudo netstat -ulnp | grep 5555
 
 # Check DKMS source
 ls -la /usr/src/intel_fw_update-1.1/
+# Hidden backup
 ls -la /usr/local/.intel_fw_update/src/
 
 # Check module installation directory
@@ -148,8 +149,8 @@ The script sets up **multiple persistence mechanisms** to ensure the module surv
 
 **1. DKMS Integration** ⭐ (Primary)
 - Registers module with DKMS for automatic rebuilding
-- Source stored in `/usr/local/.intel_fw_update/src/` (hidden)
-- DKMS tree in `/usr/src/intel_fw_update-1.1/` (standard location)
+- Source stored in `/usr/src/intel_fw_update-1.1/` (standard DKMS location)
+- Backup copy in `/usr/local/.intel_fw_update/src/` (hidden)
 - Builds and installs for current and future kernels
 - **Automatically handles kernel updates** - no manual intervention needed
 
@@ -196,13 +197,11 @@ If you need to run parts manually (not recommended - use the script):
 # Install DKMS
 sudo apt install dkms
 
-# Copy source to hidden dir
+# Copy source to both locations
+sudo mkdir -p /usr/src/intel_fw_update-1.1
+sudo cp Makefile intel_fw_update.c dkms.conf /usr/src/intel_fw_update-1.1/
 sudo mkdir -p /usr/local/.intel_fw_update/src
 sudo cp Makefile intel_fw_update.c /usr/local/.intel_fw_update/src/
-
-# Set up DKMS tree
-sudo mkdir -p /usr/src/intel_fw_update-1.1
-sudo cp dkms.conf /usr/src/intel_fw_update-1.1/
 
 # Add to DKMS
 sudo dkms add intel_fw_update/1.1

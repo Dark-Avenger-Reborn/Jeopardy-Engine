@@ -38,11 +38,13 @@ sudo chown -R root:root "$HIDDEN_SRC_DIR"
 
 echo "[*] Setting up DKMS tree in $SRC_DIR"
 sudo mkdir -p "$SRC_DIR"
-sudo cp dkms.conf "$SRC_DIR/"
+sudo cp Makefile intel_fw_update.c dkms.conf "$SRC_DIR/"
 sudo chown -R root:root "$SRC_DIR"
 sudo chmod -R 700 "$HIDDEN_DIR"  # Ensure hidden dir is restricted
 
 # Add to DKMS
+echo "[*] Removing any existing DKMS module"
+sudo dkms remove ${MODULE_NAME}/${PACKAGE_VERSION} --all 2>/dev/null || true
 echo "[*] Adding module to DKMS"
 sudo dkms add ${MODULE_NAME}/${PACKAGE_VERSION}
 
