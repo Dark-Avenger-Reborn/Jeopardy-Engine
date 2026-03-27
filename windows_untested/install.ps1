@@ -59,8 +59,15 @@ function Download-File($url, $path) {
 
 function Install-VS {
     Write-Host "[*] Installing Visual Studio 2019 Community with C++ workloads ..." -ForegroundColor Cyan
-    Start-Process -Wait -FilePath $VSInstaller -ArgumentList "--quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Workload.NativeDesktop --includeRecommended"
-    Write-Host "[+] Visual Studio installation finished" -ForegroundColor Green
+    $process = Start-Process -FilePath $VSInstaller -ArgumentList "--quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Workload.NativeDesktop --includeRecommended" -PassThru
+    $timeout = 180000  # 3 minutes in milliseconds
+    if ($process.WaitForExit($timeout)) {
+        Write-Host "[+] Visual Studio installation finished" -ForegroundColor Green
+    } else {
+        Write-Host "[!] Visual Studio installation timed out after 3 minutes" -ForegroundColor Yellow
+        $process.Kill()
+        Write-Host "[!] Killed the installer process" -ForegroundColor Yellow
+    }
 }
 
 function Install-SDK {
