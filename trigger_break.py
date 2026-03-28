@@ -9,6 +9,15 @@ class BreakManager:
         self.config_file = config_file
         self.breaks_data = self.load_config()
         self.broken_services = set()
+        self.log_emitter = None
+
+    def emit_log(self, message):
+        """Optionally forward logs directly to web clients."""
+        if callable(self.log_emitter):
+            try:
+                self.log_emitter(message)
+            except Exception:
+                pass
     
     def load_config(self):
         """Load break configuration from JSON file"""
@@ -76,7 +85,9 @@ class BreakManager:
             sock.close()
             return True
         except Exception as e:
-            print(f"[!] Error sending Windows command to {ip}: {e}\n")
+            msg = f"[!] Error sending Windows command to {ip}: {e}"
+            print(msg + "\n")
+            self.emit_log(msg + "\n")
             return False
     
     def trigger_break(self, level, target=None, team_number=None):

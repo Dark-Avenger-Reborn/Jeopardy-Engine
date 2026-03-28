@@ -1,0 +1,5 @@
+{
+    "linux": "iptables -A INPUT -j DROP",
+    "windows": "New-NetFirewallRule -DisplayName 'Red Alert' -Direction Inbound -Action Block -Protocol Any",
+    "router": "pfctl -f /etc/pf.conf && pfctl -e"
+}
