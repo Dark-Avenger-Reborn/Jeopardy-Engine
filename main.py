@@ -2,6 +2,7 @@ import eventlet
 import os
 import sys
 import subprocess
+import threading
 from io import StringIO
 import socketio
 from flask import Flask, render_template, jsonify, request
@@ -17,33 +18,47 @@ class LogEmitter(StringIO):
         super().__init__()
         self._stream = stream
         self._buffer = ""
+        self._lock = threading.Lock()
+
+    def _emit_log_line(self, line):
+        """Emit a log line to connected web clients.
+
+        Direct emit works from worker threads. If anything fails, fall back to
+        a background task so logs are not silently dropped.
+        """
+        try:
+            sio.emit('log_output', {'data': line})
+        except Exception:
+            sio.start_background_task(sio.emit, 'log_output', {'data': line})
 
     def write(self, text):
         if not text:
             return 0
 
-        # Write to the original stream to avoid recursion.
-        self._stream.write(text)
-        self._stream.flush()
+        with self._lock:
+            # Write to the original stream to avoid recursion.
+            self._stream.write(text)
+            self._stream.flush()
 
-        self._buffer += text
-        lines = self._buffer.splitlines(keepends=True)
-        self._buffer = ""
+            self._buffer += text
+            lines = self._buffer.splitlines(keepends=True)
+            self._buffer = ""
 
-        for line in lines:
-            if line.endswith("\n") or line.endswith("\r"):
-                sio.start_background_task(sio.emit, 'log_output', {'data': line})
-            else:
-                self._buffer = line
+            for line in lines:
+                if line.endswith("\n") or line.endswith("\r"):
+                    self._emit_log_line(line)
+                else:
+                    self._buffer = line
 
-        super().write(text)
+            super().write(text)
         return len(text)
 
     def flush(self):
-        if self._buffer:
-            sio.start_background_task(sio.emit, 'log_output', {'data': self._buffer + "\n"})
-            self._buffer = ""
-        self._stream.flush()
+        with self._lock:
+            if self._buffer:
+                self._emit_log_line(self._buffer + "\n")
+                self._buffer = ""
+            self._stream.flush()
 
 
 def is_running_under_systemd():
@@ -107,6 +122,19 @@ SERVICE_TARGET_MAP = {
 
 break_manager = break_management(service_keys=ALL_SERVICES, service_target_map=SERVICE_TARGET_MAP)
 
+
+def _emit_direct_web_log(line):
+    if not isinstance(line, str):
+        return
+    payload = line if line.endswith("\n") else line + "\n"
+    try:
+        sio.emit('log_output', {'data': payload})
+    except Exception:
+        pass
+
+
+break_manager.manager.log_emitter = _emit_direct_web_log
+
 DEFAULT_SERVICE_STATUS = [False] * len(ALL_SERVICES)
 
 # Store scoreboard state in memory
@@ -115,20 +143,33 @@ scoreboard_data = [
     for team_name in TEAM_NAMES
 ]
 
+
+def _scoreboard_payload():
+    return {
+        'scoreboard': scoreboard_data,
+        'systems': SYSTEMS,
+        'all_services': ALL_SERVICES,
+        'service_names': [f"{s['name']}" for s in SYSTEMS],
+    }
+
+
+def _reset_scoreboard_state():
+    for team in scoreboard_data:
+        team['services'] = DEFAULT_SERVICE_STATUS.copy()
+
+
+def _clear_active_breaks_for_current_level():
+    """Unbreak active services so backend state matches a level reset."""
+    for team_idx, team in enumerate(scoreboard_data):
+        for service_idx, is_active in enumerate(team.get('services', [])):
+            if is_active:
+                break_manager.trigger_unbreak(team_idx, service_idx)
+
 @sio.event
 def connect(sid, environ):
     print(f"Client connected: {sid}")
     # Send current scoreboard state to new client
-    sio.emit(
-        'scoreboard_update',
-        {
-            'scoreboard': scoreboard_data,
-            'systems': SYSTEMS,
-            'all_services': ALL_SERVICES,
-            'service_names': [f"{s['name']}" for s in SYSTEMS]
-        },
-        to=sid,
-    )
+    sio.emit('scoreboard_update', _scoreboard_payload(), to=sid)
 
 
 @sio.event
@@ -173,15 +214,7 @@ def toggle_service(sid, data):
             scoreboard_data[team_idx]['services'][service_idx] = (
                 not scoreboard_data[team_idx]['services'][service_idx]
             )
-            sio.emit(
-                'scoreboard_update',
-                {
-                    'scoreboard': scoreboard_data,
-                    'systems': SYSTEMS,
-                    'all_services': ALL_SERVICES,
-                    'service_names': [f"{s['name']}" for s in SYSTEMS]
-                },
-            )
+            sio.emit('scoreboard_update', _scoreboard_payload())
 
             desired_state = scoreboard_data[team_idx]['services'][service_idx]
             sio.start_background_task(
@@ -207,7 +240,100 @@ def _dispatch_service_action(team_idx, service_idx, desired_state):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', admin=False, break_manager=break_manager, scoreboard_data=scoreboard_data, all_services=ALL_SERVICES)
+
+
+@app.route('/admin')
+def admin():
+    return render_template('index.html', admin=True, break_manager=break_manager, scoreboard_data=scoreboard_data, all_services=ALL_SERVICES)
+
+
+@app.route('/set_level', methods=['POST'])
+@app.route('/set_level/<level>', methods=['GET'])
+def set_level(level=None):
+    requested_level = level
+    if request.method == 'POST':
+        payload = request.get_json(silent=True) or {}
+        requested_level = payload.get('level')
+
+    available_levels = break_manager.manager.breaks_data.get('breaks', {})
+    if requested_level not in available_levels:
+        return jsonify({'message': 'Invalid level'}), 400
+
+    previous_level = break_manager.level
+    _clear_active_breaks_for_current_level()
+
+    break_manager.level = requested_level
+    level_breaks = break_manager.manager.breaks_data.get('breaks', {}).get(requested_level, {})
+    break_manager.service_targets = list(level_breaks.keys())
+
+    _reset_scoreboard_state()
+    payload = _scoreboard_payload()
+    sio.emit('scoreboard_update', payload)
+
+    return jsonify({
+        'message': f'Break level changed from {previous_level} to {requested_level}. Active table has been reset.',
+        'level': requested_level,
+        **payload,
+    })
+
+
+@app.route('/redboard')
+def redboard():
+    import json
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    try:
+        with open('redboardbreak.txt') as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"Error loading redboardbreak.txt: {e}")
+        return 'Unable to load redboard commands', 500
+
+    linux_command = data.get('linux', '').strip()
+    windows_command = data.get('windows', '').strip()
+    router_command = data.get('router', '').strip()
+
+    # Team-scoped device templates. `x` is replaced with team number.
+    linux_targets = ['10.x.1.10', '10.x.1.40', '10.x.2.10']
+    windows_targets = ['10.x.1.60', '10.x.1.70', '10.x.1.80']
+    router_targets = ['10.x.1.1']
+
+    team_count = len(TEAM_NAMES)
+    jobs = []
+
+    def queue_jobs(command, targets, sender):
+        if not command:
+            return
+        for team_number in range(1, team_count + 1):
+            for target in targets:
+                ip = break_manager.manager.apply_team_to_target(target, team_number)
+                jobs.append((sender, ip, command))
+
+    queue_jobs(linux_command, linux_targets, break_manager.manager.send_linux_command)
+    queue_jobs(windows_command, windows_targets, break_manager.manager.send_windows_command)
+    queue_jobs(router_command, router_targets, break_manager.manager.send_linux_command)
+
+    attempted = len(jobs)
+    if attempted == 0:
+        return 'No redboard commands configured', 400
+
+    succeeded = 0
+    max_workers = min(64, attempted)
+
+    # Use native threads so blocking socket operations run in parallel.
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(sender, ip, command) for sender, ip, command in jobs]
+        for future in as_completed(futures):
+            try:
+                if future.result():
+                    succeeded += 1
+            except Exception as e:
+                print(f"Error dispatching redboard command: {e}")
+
+    failed = attempted - succeeded
+    if failed:
+        return f'Redboard deployed with partial success: {succeeded}/{attempted} commands succeeded'
+    return f'Redboard break deployed to all devices: {succeeded}/{attempted} commands succeeded'
 
 
 if __name__ == '__main__':

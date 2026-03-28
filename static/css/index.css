@@ -86,6 +86,115 @@ main {
 .footer p {
   margin: 0;
 }
+.admin-panel {
+  background: linear-gradient(160deg, #fffdf8 0%, #fff7e9 100%);
+  border: 1px solid #e2d9c3;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 24px rgba(78, 52, 25, 0.08);
+}
+.admin-info p {
+  margin: 8px 0;
+}
+.admin-controls {
+  margin-top: 24px;
+}
+.admin-controls select {
+  padding: 10px 12px;
+  border: 1px solid #ccb58f;
+  border-radius: 8px;
+  font-weight: 600;
+  background: #fff;
+}
+
+.level-status {
+  min-height: 20px;
+  margin: 10px 0 0;
+  font-size: 0.95em;
+  color: #6b675f;
+}
+
+.level-status.pending {
+  color: #8a5e00;
+}
+
+.level-status.success {
+  color: #1f7c42;
+}
+
+.level-status.error {
+  color: #b02020;
+}
+.redboard-section {
+  margin-top: 24px;
+}
+.redboard-button-container {
+  position: relative;
+  display: inline-block;
+  margin-top: 16px;
+}
+
+.lever-hint {
+  margin: 8px 0 0;
+  color: #6f6558;
+  font-size: 0.9em;
+}
+.protective-cap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #666;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.5s;
+  z-index: 1;
+}
+.protective-cap.open {
+  transform: translateY(-100%);
+}
+.redboard-button {
+  background: linear-gradient(180deg, #ff4242 0%, #c91414 100%);
+  color: #fff7ef;
+  border: none;
+  padding: 20px 40px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 300px;
+  height: 80px;
+  box-shadow: 0 8px 0 #7d0f0f, 0 14px 24px rgba(102, 16, 16, 0.38);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.redboard-button:hover:not(.locked) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 0 #7d0f0f, 0 18px 26px rgba(102, 16, 16, 0.42);
+}
+
+.redboard-button:active:not(.locked) {
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 #7d0f0f, 0 8px 16px rgba(102, 16, 16, 0.35);
+}
+.redboard-button.locked,
+.redboard-button[aria-disabled="true"] {
+  background: linear-gradient(180deg, #d9d9d9 0%, #b5b5b5 100%);
+  cursor: not-allowed;
+  box-shadow: 0 5px 0 #8b8b8b;
+}
 .scoreboard {
   background: #fff;
   border: 1px solid #e2d9c3;
@@ -258,6 +367,30 @@ main {
   padding: 18px 18px 18px 18px; /* Padding around terminal */
 }
 
+.admin-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 460px);
+  gap: 20px;
+  align-items: start;
+}
+
+.terminal-pinned {
+  position: sticky !important;
+  top: 24px !important;
+  right: auto !important;
+  width: 100%;
+  min-height: 460px;
+  max-height: calc(100vh - 140px);
+}
+
+.admin-main-panel {
+  min-width: 0;
+}
+
+.admin-scoreboard {
+  margin-bottom: 0;
+}
+
 .server-action {
   display: block;
   width: 100%;
@@ -366,6 +499,15 @@ main {
     width: 100%;
     padding: 12px;
     margin-top: 12px;
+  }
+
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .terminal-pinned {
+    min-height: 280px;
+    max-height: 420px;
   }
 
   .modal-content {

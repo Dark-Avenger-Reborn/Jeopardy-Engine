@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const errorModal = document.getElementById("errorModal");
   const errorText = document.getElementById("errorText");
   const errorCloseBtn = document.getElementById("errorCloseBtn");
+  const levelStatus = document.getElementById("level-status");
+  const isAdminPage = window.location.pathname === "/admin";
 
   let term = null;
   let terminalOpened = false;
@@ -47,9 +49,25 @@ document.addEventListener("DOMContentLoaded", function () {
   // ✅ Create single socket connection here
   const socket = io(); // Adjust namespace only if required, e.g., io("/some-namespace")
 
+  function setLevelStatus(message, type = "") {
+    if (!levelStatus) {
+      return;
+    }
+    levelStatus.textContent = message;
+    levelStatus.className = `level-status ${type}`.trim();
+  }
+
   // Show Terminal
   showTerminalBtn.addEventListener("click", function (e) {
     e.stopPropagation();
+
+    if (isAdminPage) {
+      if (!terminalOpened) {
+        initTerminal();
+      }
+      terminalBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      return;
+    }
 
     if (terminalBox.style.display === "block") {
       terminalBox.style.display = "none";
@@ -90,6 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Hide Terminal & Dropdown on Outside Click
   document.addEventListener("mousedown", function (event) {
     if (
+      !isAdminPage &&
       terminalBox.style.display === "block" &&
       !terminalBox.contains(event.target) &&
       !showTerminalBtn.contains(event.target)
@@ -152,6 +171,132 @@ document.addEventListener("DOMContentLoaded", function () {
     confirmationModal.classList.add("hidden");
     pendingAction = null;
   });
+
+  // Admin Button
+  const adminBtn = document.getElementById("admin-btn");
+  if (adminBtn) {
+    adminBtn.addEventListener("click", function () {
+      window.location.href = isAdminPage ? "/" : "/admin";
+    });
+  }
+
+  // Level Select
+  const levelSelect = document.getElementById("level-select");
+  if (levelSelect) {
+    levelSelect.addEventListener("change", async function () {
+      const level = levelSelect.value;
+      levelSelect.disabled = true;
+      setLevelStatus("Switching break level and clearing active breaks...", "pending");
+
+      try {
+        const response = await fetch("/set_level", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ level }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to switch break level.");
+        }
+
+        document.getElementById("current-level").textContent = data.level || level;
+        if (data.scoreboard && data.systems && data.all_services) {
+          scoreboardData = data.scoreboard;
+          systems = data.systems;
+          allServices = data.all_services;
+          renderScoreboard();
+        }
+        setLevelStatus(data.message || `Break level changed to ${level}.`, "success");
+      } catch (err) {
+        setLevelStatus(err.message || "Unable to change break level.", "error");
+        showError(err.message || "Unable to change break level.");
+      } finally {
+        levelSelect.disabled = false;
+      }
+    });
+  }
+
+  // Redboard Button Logic
+  const protectiveCap = document.getElementById("protective-cap");
+  const redboardBtn = document.getElementById("redboard-btn");
+  let capOpen = false;
+
+  if (protectiveCap) {
+    protectiveCap.addEventListener("click", function () {
+      capOpen = !capOpen;
+      protectiveCap.classList.toggle("open");
+      checkRedboardReady();
+    });
+  }
+
+  function checkRedboardReady() {
+    if (!redboardBtn) {
+      return;
+    }
+
+    if (capOpen) {
+      redboardBtn.classList.remove("locked");
+      redboardBtn.setAttribute("aria-disabled", "false");
+    } else {
+      redboardBtn.classList.add("locked");
+      redboardBtn.setAttribute("aria-disabled", "true");
+    }
+  }
+
+  if (redboardBtn) {
+    checkRedboardReady();
+
+    redboardBtn.addEventListener("click", function () {
+      if (redboardBtn.classList.contains("locked")) {
+        setLevelStatus("Open the SEALED cap before firing Redboard.", "pending");
+        return;
+      }
+
+      fetch("/redboard")
+        .then(response => response.text())
+        .then(data => setLevelStatus(data, "success"))
+        .catch(() => showError("Unable to deploy redboard break."));
+    });
+  }
+
+  // If admin, init terminal immediately
+  if (isAdminPage) {
+    initTerminal();
+  }
+
+  function initTerminal() {
+    if (!terminalOpened) {
+      term = new Terminal({
+        cursorBlink: true,
+        fontFamily: "monospace",
+        fontSize: 14,
+        theme: {
+          background: "#1e1e1e",
+          foreground: "#f5f5f5",
+        },
+      });
+
+      const fitAddon = new FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(terminalContainer);
+      term.write("Server log will appear here...\r\n");
+
+      const dimensions = fitAddon.proposeDimensions();
+      if (dimensions?.cols && dimensions?.rows) {
+        term.resize(dimensions.cols, dimensions.rows);
+      }
+
+      socket.on("log_output", (msg) => {
+        writeTerminalLogChunk(msg.data || "");
+      });
+
+      terminalOpened = true;
+    }
+    terminalBox.style.display = "block";
+  }
 
   function showError(message) {
     errorText.textContent = message;

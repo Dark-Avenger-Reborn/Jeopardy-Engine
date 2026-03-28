@@ -13,7 +13,7 @@
     <script src="https://cdn.jsdelivr.net/gh/intuition-dev/mbToolBelt@v2.10.17/src/vendors/xterm/AttachAddon.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/intuition-dev/mbToolBelt@v2.10.17/src/vendors/xterm/FitAddon.js"></script>
   </head>
-  <body>
+  <body class="{% if admin %}admin-mode{% endif %}">
     <div id="errorModal" class="modal hidden">
       <div class="modal-content">
         <p id="errorText">An error occurred.</p>
@@ -92,10 +92,69 @@
             </li>
           </ul>
         </div>
+        <button class="icon-btn" id="admin-btn" title="Admin Panel">
+          <!-- Admin Icon SVG -->
+          <svg width="24" height="24" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="black" stroke-width="2" fill="none"/>
+            <circle cx="12" cy="12" r="4" stroke="black" stroke-width="2" fill="none"/>
+            <line x1="12" y1="2" x2="12" y2="6" stroke="black" stroke-width="2"/>
+            <line x1="12" y1="18" x2="12" y2="22" stroke="black" stroke-width="2"/>
+            <line x1="2" y1="12" x2="6" y2="12" stroke="black" stroke-width="2"/>
+            <line x1="18" y1="12" x2="22" y2="12" stroke="black" stroke-width="2"/>
+          </svg>
+        </button>
       </div>
     </header>
 
     <main>
+      {% if admin %}
+      <section class="admin-layout">
+        <div class="admin-main-panel">
+          <section class="admin-panel">
+            <h2>Admin Panel</h2>
+            <div class="admin-info">
+              <p>Current Break Level: <span id="current-level">{{ break_manager.level }}</span></p>
+              <p>Number of Teams: {{ scoreboard_data|length }}</p>
+              <p>Number of Services: {{ all_services|length }}</p>
+            </div>
+            <div class="admin-controls">
+              <h3>Change Break Level</h3>
+              <select id="level-select">
+                <option value="lvl1" {% if break_manager.level == 'lvl1' %}selected{% endif %}>Level 1</option>
+                <option value="lvl3" {% if break_manager.level == 'lvl3' %}selected{% endif %}>Level 3</option>
+              </select>
+              <p id="level-status" class="level-status" aria-live="polite"></p>
+            </div>
+            <div class="redboard-section">
+              <h3>Redboard Break</h3>
+              <div class="redboard-button-container">
+                <div class="protective-cap" id="protective-cap">
+                  <span>SEALED</span>
+                </div>
+                <button class="redboard-button locked" id="redboard-btn" aria-disabled="true">
+                  REDBOARD
+                </button>
+              </div>
+              <p class="lever-hint">Open SEALED cap to arm Redboard.</p>
+            </div>
+          </section>
+
+          <section class="scoreboard admin-scoreboard">
+            <h2>Live Break Matrix</h2>
+            <table class="scoreboard-table">
+              <thead id="scoreboardHead"></thead>
+              <tbody id="scoreboardBody"></tbody>
+            </table>
+          </section>
+        </div>
+
+        <!-- Terminal output area -->
+        <aside id="terminal-container" class="terminal-pinned">
+          <h3>Server Console Output</h3>
+          <div id="terminal"></div>
+        </aside>
+      </section>
+      {% else %}
       <section class="scoreboard">
         <h2>EnvEngine Scoreboard</h2>
         <table class="scoreboard-table">
@@ -103,15 +162,18 @@
           <tbody id="scoreboardBody"></tbody>
         </table>
       </section>
+      {% endif %}
       <div class="extra-space">
         <!-- Any extra space can be left til a later point arrives -->
       </div>
 
-      <!-- Terminal output area, initially hidden -->
+      <!-- Terminal output area -->
+      {% if not admin %}
       <div id="terminal-container" style="display: none">
         <h3>Server Console Output</h3>
         <div id="terminal"></div>
       </div>
+      {% endif %}
     </main>
 
     <!-- Confirmation Modal -->
