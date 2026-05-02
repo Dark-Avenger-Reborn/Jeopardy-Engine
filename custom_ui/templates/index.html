@@ -1,4 +1,112 @@
-<!DOCTYPE html>
+{% extends 'base.html' %}
+
+{% block title %}Signal Deck | Scan{% endblock %}
+{% block content %}
+<section class="hero-grid">
+    <div class="hero-panel panel">
+        <div class="eyebrow">Standalone control surface</div>
+        <h1>Turn the scanner into a proper command deck.</h1>
+        <p class="lede">The old form is gone. This version gives you a clear scan setup, quick presets, clipboard helpers, and a browser-side memory of your last few runs.</p>
+
+        <div class="metric-grid">
+            <article class="metric-card">
+                <span class="metric-label">Scanner IP</span>
+                <strong>{{ private_ip }}</strong>
+                <span class="metric-meta">Auto-detected from this host</span>
+            </article>
+            <article class="metric-card">
+                <span class="metric-label">Preset bank</span>
+                <strong>{{ presets|length }}</strong>
+                <span class="metric-meta">One-click range seeds</span>
+            </article>
+            <article class="metric-card">
+                <span class="metric-label">Mode</span>
+                <strong>Separate UI</strong>
+                <span class="metric-meta">No coupling to the Jeopardy engine</span>
+            </article>
+        </div>
+
+        <div class="hero-actions">
+            <a href="/guide" class="button ghost">Read the field guide</a>
+            <button type="button" class="button subtle" data-copy-callback data-copy-value="http://{{ private_ip }}:{{ 8080 }}/">Copy scanner URL</button>
+        </div>
+    </div>
+
+    <aside class="stack">
+        <section class="panel preview-panel">
+            <div class="panel-header">
+                <div>
+                    <div class="eyebrow">Preset drawer</div>
+                    <h2>Load a scan recipe</h2>
+                </div>
+                <span class="chip muted">Saved locally</span>
+            </div>
+            <div class="preset-grid">
+                {% for preset in presets %}
+                <button type="button" class="preset-card" data-preset-button data-linux-range="{{ preset.linux_range }}" data-windows-range="{{ preset.windows_range }}" data-preset-name="{{ preset.name }}">
+                    <strong>{{ preset.name }}</strong>
+                    <span>{{ preset.note }}</span>
+                </button>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="panel preview-panel">
+            <div class="panel-header">
+                <div>
+                    <div class="eyebrow">Recent runs</div>
+                    <h2>Your last edits</h2>
+                </div>
+                <button type="button" class="button tiny subtle" data-clear-recents>Clear</button>
+            </div>
+            <div class="recent-list" data-recent-list>
+                <div class="empty-copy">Nothing saved yet. Submit a scan once and this panel starts collecting your last ranges.</div>
+            </div>
+        </section>
+    </aside>
+</section>
+
+<section class="panel form-panel">
+    <div class="panel-header">
+        <div>
+            <div class="eyebrow">Scan setup</div>
+            <h2>Define the target bands</h2>
+        </div>
+        <span class="chip">Quick-start defaults preloaded</span>
+    </div>
+
+    <form action="/scan" method="post" data-scan-form class="scan-form">
+        <div class="form-grid">
+            <label class="field">
+                <span>Linux range</span>
+                <input type="text" id="linux_range" name="linux_range" value="{{ linux_range }}" placeholder="10.1-13.1.10,20,30,40" required>
+                <small>Comma separated IPs or compact range syntax.</small>
+            </label>
+
+            <label class="field">
+                <span>Windows range</span>
+                <input type="text" id="windows_range" name="windows_range" value="{{ windows_range }}" placeholder="10.1-13.1.60,70,80" required>
+                <small>Keep this separate so the table stays readable later.</small>
+            </label>
+
+            <label class="field full-width">
+                <span>Scanner IP</span>
+                <input type="text" id="scanner_ip" name="scanner_ip" value="{{ private_ip }}" placeholder="192.168.1.100" required>
+                <small>Targets will call back to this address.</small>
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <div class="preset-inline">
+                {% for preset in presets %}
+                <button type="button" class="chip-button" data-preset-button data-linux-range="{{ preset.linux_range }}" data-windows-range="{{ preset.windows_range }}" data-preset-name="{{ preset.name }}">{{ preset.name }}</button>
+                {% endfor %}
+            </div>
+            <button type="submit" class="button primary">Launch scan</button>
+        </div>
+    </form>
+</section>
+{% endblock %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">

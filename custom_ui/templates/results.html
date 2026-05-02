@@ -1,4 +1,236 @@
-<!DOCTYPE html>
+{% extends 'base.html' %}
+
+{% block title %}Signal Deck | Results{% endblock %}
+{% block content %}
+<section class="results-hero panel">
+    <div class="results-hero-copy">
+        <div class="eyebrow">Live board</div>
+        <h1>Scan results, shell access, and bulk actions in one room.</h1>
+        <p class="lede">Use the filters, star the hosts you care about, export the current view, or drop straight into the terminal. The UI keeps the fast path obvious and the noisy parts tucked away.</p>
+
+        <div class="hero-meta">
+            <span class="chip">Scanner: {{ scanner_ip or 'Not set yet' }}</span>
+            <span class="chip">Last scan: {{ scan_at or 'Pending' }}</span>
+            <span class="chip">{{ summary.total }} targets</span>
+        </div>
+
+        {% if scan_message %}
+        <div class="notice">{{ scan_message }}</div>
+        {% endif %}
+        {% if message %}
+        <div class="notice {% if 'error' in message.lower() or 'invalid' in message.lower() or 'unknown' in message.lower() %}error{% endif %}">{{ message }}</div>
+        {% endif %}
+    </div>
+
+    <div class="summary-strip">
+        <article class="summary-card">
+            <span>Live</span>
+            <strong>{{ summary.live }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>Silent</span>
+            <strong>{{ summary.silent }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>Linux</span>
+            <strong>{{ summary.linux }}</strong>
+        </article>
+        <article class="summary-card">
+            <span>Windows</span>
+            <strong>{{ summary.windows }}</strong>
+        </article>
+    </div>
+</section>
+
+<section class="workspace-grid">
+    <div class="stack">
+        <section class="panel table-panel">
+            <div class="panel-header wrap">
+                <div>
+                    <div class="eyebrow">Device ledger</div>
+                    <h2>Discoveries with live filtering</h2>
+                </div>
+                <div class="control-bar">
+                    <label class="search-box">
+                        <span>Search</span>
+                        <input type="search" placeholder="Filter by IP or OS" data-device-search>
+                    </label>
+                    <div class="chip-row" data-filter-group>
+                        <button type="button" class="chip active" data-filter="all">All</button>
+                        <button type="button" class="chip" data-filter="linux">Linux</button>
+                        <button type="button" class="chip" data-filter="windows">Windows</button>
+                        <button type="button" class="chip" data-filter="live">Live</button>
+                        <button type="button" class="chip" data-filter="silent">Silent</button>
+                    </div>
+                </div>
+            </div>
+
+            {% if devices %}
+            <div class="table-shell">
+                <table class="device-table" data-device-table>
+                    <thead>
+                        <tr>
+                            <th>Star</th>
+                            <th>IP</th>
+                            <th>OS</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for device in devices %}
+                        <tr data-device-row data-ip="{{ device.ip }}" data-os="{{ device.os|lower }}" data-status="{{ device.status|lower }}">
+                            <td>
+                                <button type="button" class="star-button" aria-label="Pin {{ device.ip }}" data-watch-toggle data-watch-ip="{{ device.ip }}">+</button>
+                            </td>
+                            <td><code>{{ device.ip }}</code></td>
+                            <td>
+                                <span class="os-pill os-{{ device.os|lower }}">{{ device.os }}</span>
+                            </td>
+                            <td>
+                                <span class="status-pill {% if device.status == 'Called back' %}status-live{% else %}status-silent{% endif %}">{{ device.status }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-graphic"></div>
+                <h3>No devices yet</h3>
+                <p>The board is empty until a scan starts returning callbacks.</p>
+            </div>
+            {% endif %}
+
+            <div class="table-footer">
+                <button type="button" class="button subtle tiny" data-copy-visible>Copy visible IPs</button>
+                <button type="button" class="button subtle tiny" data-export-json>Export JSON</button>
+                <button type="button" class="button subtle tiny" data-export-csv>Export CSV</button>
+            </div>
+        </section>
+
+        <section class="panel action-panel">
+            <div class="panel-header wrap">
+                <div>
+                    <div class="eyebrow">Action studio</div>
+                    <h2>Send bulk commands or start a direct connection</h2>
+                </div>
+                <span class="chip muted">Still separate from the engine</span>
+            </div>
+
+            <div class="action-grid">
+                <form action="/mass_command" method="post" class="mini-form">
+                    <label class="field">
+                        <span>Command</span>
+                        <textarea id="cmd" name="cmd" rows="4" placeholder="whoami&#10;uname -a&#10;systeminfo" required></textarea>
+                    </label>
+
+                    <label class="field">
+                        <span>Target OS</span>
+                        <select id="os" name="os" required>
+                            <option value="">Choose one</option>
+                            <option value="linux">Linux</option>
+                            <option value="windows">Windows</option>
+                        </select>
+                    </label>
+
+                    <div class="shortcut-row">
+                        <button type="button" class="chip-button" data-shell-command="whoami">whoami</button>
+                        <button type="button" class="chip-button" data-shell-command="hostname">hostname</button>
+                        <button type="button" class="chip-button" data-shell-command="uname -a">uname -a</button>
+                        <button type="button" class="chip-button" data-shell-command="ip a">ip a</button>
+                    </div>
+
+                    <button type="submit" class="button primary">Execute across callbacks</button>
+                </form>
+
+                <form action="/one_on_one" method="post" class="mini-form">
+                    <label class="field">
+                        <span>Target IP address</span>
+                        <input type="text" id="ip" name="ip" placeholder="192.168.1.60" required>
+                    </label>
+
+                    <label class="field">
+                        <span>Operating system</span>
+                        <select id="direct_os" name="os" required>
+                            <option value="">Choose one</option>
+                            <option value="linux">Linux</option>
+                            <option value="windows">Windows</option>
+                        </select>
+                    </label>
+
+                    <div class="shortcut-row">
+                        <button type="button" class="chip-button" data-fill-target="{{ devices[0].ip if devices else '' }}">First target</button>
+                        <button type="button" class="chip-button" data-fill-target="{{ scanner_ip or '' }}">Scanner IP</button>
+                    </div>
+
+                    <button type="submit" class="button primary">Open direct connection</button>
+                </form>
+            </div>
+        </section>
+    </div>
+
+    <aside class="stack aside-rail">
+        <section class="panel watcher-panel">
+            <div class="panel-header">
+                <div>
+                    <div class="eyebrow">Pinned hosts</div>
+                    <h2>Remember the important ones</h2>
+                </div>
+                <span class="chip muted">Stored in localStorage</span>
+            </div>
+            <div class="watchlist" data-watchlist>
+                <div class="empty-copy">Nothing pinned yet. Tap the plus icon next to a host to create a shortlist.</div>
+            </div>
+        </section>
+
+        <section class="panel watcher-panel">
+            <div class="panel-header">
+                <div>
+                    <div class="eyebrow">Terminal shortcuts</div>
+                    <h2>Quick shell launches</h2>
+                </div>
+            </div>
+            <div class="shortcut-grid">
+                <button type="button" class="shortcut-card" data-shell-command="pwd">pwd</button>
+                <button type="button" class="shortcut-card" data-shell-command="id">id</button>
+                <button type="button" class="shortcut-card" data-shell-command="ls -la">ls -la</button>
+                <button type="button" class="shortcut-card" data-shell-command="netstat -an">netstat -an</button>
+                <button type="button" class="shortcut-card" data-shell-command="ps aux">ps aux</button>
+                <button type="button" class="shortcut-card" data-shell-command="systeminfo">systeminfo</button>
+            </div>
+        </section>
+    </aside>
+</section>
+
+<section class="panel terminal-panel">
+    <div class="panel-header wrap">
+        <div>
+            <div class="eyebrow">Live shell</div>
+            <h2>Interactive command stream</h2>
+        </div>
+        <span class="chip">Keyboard input goes straight through the socket</span>
+    </div>
+    <div class="terminal-shell">
+        <div id="terminal"></div>
+    </div>
+</section>
+
+<div class="footer-nav">
+    <a href="/" class="button ghost">New scan</a>
+    <a href="/guide" class="button subtle">Open guide</a>
+    <span class="footer-note">Use the star icon to build a watchlist that stays in your browser.</span>
+</div>
+{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+{% endblock %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
