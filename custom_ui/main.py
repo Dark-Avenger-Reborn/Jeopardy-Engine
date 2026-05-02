@@ -4,6 +4,7 @@ import socket
 import threading
 import time
 import logging
+import concurrent.futures
 from flask import Flask, request, render_template, redirect, url_for
 import ipaddress
 from flask_socketio import SocketIO, emit
@@ -228,10 +229,17 @@ def scan():
     callback_url = f"http://{scanner_ip}:{port}/callback"
     linux_cmd = f"ip=$(ip route get 1 | awk '{{print $7}}'); wget -q -O /dev/null \"{callback_url}?ip=$ip\""
     windows_cmd = f"powershell -c \"Invoke-WebRequest -Uri ('{callback_url}?ip=' + (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {{$_.InterfaceAlias -notlike '*Loopback*'}} | Select-Object -First 1).IPAddress) -UseBasicParsing\""
-    for ip in app.scanner.linux_ips:
-        send_linux_command(ip, linux_cmd)
-    for ip in app.scanner.windows_ips:
-        send_windows_command(ip, windows_cmd)
+    
+    # Send commands in parallel using threading
+    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+        # Submit Linux commands
+        linux_futures = [executor.submit(send_linux_command, ip, linux_cmd) for ip in app.scanner.linux_ips]
+        # Submit Windows commands  
+        windows_futures = [executor.submit(send_windows_command, ip, windows_cmd) for ip in app.scanner.windows_ips]
+        
+        # Wait for all commands to complete (optional, but good practice)
+        concurrent.futures.wait(linux_futures + windows_futures)
+    
     time.sleep(30)  # wait for callbacks
     return redirect(url_for('results'))
 
@@ -255,8 +263,9 @@ def mass_command():
             message = "Invalid OS"
             devices = app.scanner.get_devices()
             return render_template('results.html', devices=devices, scanner_ip=app.scanner.scanner_ip, message=message)
-    for ip in targets:
-        send_func(ip, cmd)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        futures = [executor.submit(send_func, ip, cmd) for ip in targets]
+        concurrent.futures.wait(futures)
     message = f"Mass command sent to {len(targets)} {os_type} devices"
     devices = app.scanner.get_devices()
     return render_template('results.html', devices=devices, scanner_ip=app.scanner.scanner_ip, message=message)
